@@ -1,0 +1,175 @@
+---
+title: "Quantization error"
+output: html_notebook
+---
+
+\newcommand{\Ecal}{\mathcal{Y}}
+\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
+\newcommand{\Espbiais}[1]{\mathbb{E}_{\biais}\left[#1\right]}
+\newcommand{\centro}{\gamma}
+\newcommand{\Gamm}{\Gamma}
+\newcommand{\norm}[1]{\lVert #1 \lVert_{\Ecal}}
+\newcommand{\rep}{q_{\Gamm}}
+\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
+\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
+\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\Ecal}}
+\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\scalprodomega}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\biais}{\nu}
+\newcommand{\repo}{q^{0}_{\Gamm}}
+\newcommand{\Xtildek}{\tilde{X}^{k}}
+\newcommand{\Espprod}[1]{\mathbb{E}_{\Omega_{1}, \Omega_{2}}\left[#1\right]}
+\newcommand{\var}{\mathbb{V}}
+\newcommand{\clust}[2]{C^{#1}_{#2}}
+\newcommand{\yinclust}[3]{#1 \in \clust{#2}{#3}}
+\newcommand{\card}{\ell}
+\newcommand{\campbell}{h}
+\newcommand{\aff}{a}
+\newcommand{\Jcal}{\mathcal{J}}
+\newcommand{\Ytrue}{{Y}}
+\newcommand{\Ypred}{\hat{Y}}
+\newcommand{\Ysimu}{Y_{simu}}
+\newcommand{\camprandom}{H}
+\newcommand{\dime}{64}
+\newcommand{\Gammaref}{\Gamma^{\star}}
+\newcommand{\Gammapred}{\hat\Gamma_{\star}}
+\newcommand{\Gammasimu}{\Gamma_{simu}}
+\newcommand{\erreurproba}{\varepsilon}
+\newcommand{\erreurprobarelative}{\delta}
+\newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
+
+\newcommand{\nbgamma}{100}
+\newcommand{\nbpilot}{v}
+\newcommand{\ntrue}{n_{t}}
+\newcommand{\npred}{n_{pred}}
+\newcommand{\nsimu}{n_{\mathrm{simu}}}
+\newcommand{\Dspace}{\chi}
+\newcommand{\supp}{{\mathrm{supp}}}
+\newcommand{\thresh}{t}
+\newcommand{\estim}{\hat{E}}
+\newcommand{\nbsim}{m_{\mathrm{simu}}}
+\newcommand{\ntrain}{n_{\mathrm{train}}}
+\newcommand{\ntest}{n_{\mathrm{test}}}
+\newcommand{\eqdef}{:=}
+\newcommand{\Ypca}{Y^{\mathrm{pca}}}
+\newcommand{\Yproj}{Y_{\mathrm{proj}}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand\dsone{\mathds{1}}
+\newcommand{\Ecal}{\mathcal{E}}
+\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\centro}{\gamma}
+\newcommand{\Gamm}{\Gamma}
+\newcommand{\norm}[1]{\lVert #1 \lVert_{\mathcal{E}}}
+\newcommand{\rep}{q_{\Gamm}}
+\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
+\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
+\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\mathcal{E}}}
+\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\repo}{q^{0}_{\Gamm}}
+\newcommand{\Xtildek}{\tilde{X}^{k}}
+
+
+With the notebooks lloyd_true.Rmd and lloyd_predict.Rmd, we obtained two different sets of prototype maps : $\Gamm^{\star}$ obtained with the maps and $\hat{\Gamm}^{\star}$ with the predicted maps. 
+
+Therefore, to evaluate the quality of the representive maps obtained in the predicted case, we compute the relative error $\frac{\hat{e}(\Gammapred)-\hat{e}(\Gammaref)}{\hat{e}(\Gammaref)}$ with $\hat{e}(\Gamm) = \left(\frac{1}{10^6} \sum_{k = 1}^{10^6} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}\right)^{\frac{1}{2}}$ the empirical quantization error. It evaluates the prototypes maps obtained with the predicted maps compared to the ones obtained with the real maps.
+
+```{r}
+load("NewFitting_Charlie_v090821.RData")
+
+source("Campbell2D.R")
+source("Campbell_utils.R")
+source.all("GpOutput2D-main/GpOutput2D/R")
+```
+
+```{r}
+dim_map = c(64,64)
+
+z1 = seq(-90,90,l=dim_map[1])
+z2 = seq(-90,90,l=dim_map[2])
+```
+
+```{r}
+set.seed(1234)
+n=10^6
+Xtilde = matrix(runif(n =5*n), ncol = 5)
+Xtilde = cbind(Xtilde, sample(1:10,size = n, replace = TRUE) / 10)
+
+unif = runif(n) 
+Xtilde = cbind(Xtilde, (unif <= 8/13)*runif(n))
+
+Xtilde = cbind(Xtilde, rep(-1,n))
+Xtilde = transform_X(Xtilde)
+
+```
+
+```{r}
+Xtilde_phy = ((Xtilde + 1)/6)[,1:7]
+for(i in 1:5){
+  Xtilde_phy[,i] = Xtilde_phy[,i] * (df_bornes[i,2]-df_bornes[i,1]) + df_bornes[i,1]
+}
+Xtilde_phy[,6] = Xtilde_phy[,6]*10
+
+registerDoParallel(cores = 24)
+
+densite_vec = foreach(it = 1:10, .combine = "c") %dopar% {
+  densite_ratio_full_vec(Xtilde_phy[((it-1)*10^5 + 1):(it*10^5),])
+}
+```
+
+
+We load the obtained representative maps 
+
+```{r}
+load("lloyd_true_notebook.RData")
+load("lloyd_res_true.RData")
+gamma_true = lloyd_res_true$gamma
+
+load("lloyd_res_predict.RData")
+gamma_pred = lloyd_res_predict$gamma
+```
+
+The function get_distance computes for each map of a database of maps, the distance between the map and its closest prototype map.
+```{r}
+get_distance = function(maps, gamma){
+  return(Vectorize(function(it){distance_gamma(maps[,,it], gamma)$dist})(1:dim(maps)[3]))
+}
+```
+
+The function sum_quanti_error compute $\sum_{k = 1}^{n} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$
+```{r}
+sum_quanti_error = function(maps, gamma, densite_vec){
+    distances = get_distance(maps,gamma)
+    return(sum(distances^2*densite_vec))
+}
+```
+
+We compute $\sum_{k = 1}^{10^6} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ for $\Gamm = \Gamm^{\star}$ and  $\Gamm = \hat{\Gamm}^{\star}$
+
+```{r, results='hide'}
+sum_error_true = 0
+sum_error_pred = 0
+for(it in 1:10){
+    print(it)
+    maps = Campbell2D(Xtilde[((it-1)*10^5+1):(it*10^5),], z1, z2)
+    sum_error_true = sum_error_true + sum_quanti_error(maps, gamma_true, densite_vec[((it-1)*10^5+1):(it*10^5)])
+    sum_error_pred = sum_error_pred + sum_quanti_error(maps, gamma_pred, densite_vec[((it-1)*10^5+1):(it*10^5)])
+
+}
+
+rm(maps)
+```
+We now compute the relative difference between the quantization error obtained with the predicted maps and with the true maps.
+
+```{r}
+abs(sqrt(sum_error_true/10^6) - sqrt(sum_error_pred/10^6))/sqrt(sum_error_pred/10^6)
+```
+
+
+
+
+
+
+
+

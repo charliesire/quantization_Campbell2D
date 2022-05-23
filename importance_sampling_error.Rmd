@@ -1,0 +1,260 @@
+---
+title: "Importance sampling performance metrics"
+output: html_notebook
+---
+
+\newcommand{\Ecal}{\mathcal{Y}}
+\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
+\newcommand{\Espbiais}[1]{\mathbb{E}_{\biais}\left[#1\right]}
+\newcommand{\centro}{\gamma}
+\newcommand{\Gamm}{\Gamma}
+\newcommand{\norm}[1]{\lVert #1 \lVert_{\Ecal}}
+\newcommand{\rep}{q_{\Gamm}}
+\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
+\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
+\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\Ecal}}
+\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\scalprodomega}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\biais}{\nu}
+\newcommand{\repo}{q^{0}_{\Gamm}}
+\newcommand{\Xtildek}{\tilde{X}^{k}}
+\newcommand{\Espprod}[1]{\mathbb{E}_{\Omega_{1}, \Omega_{2}}\left[#1\right]}
+\newcommand{\var}{\mathbb{V}}
+\newcommand{\clust}[2]{C^{#1}_{#2}}
+\newcommand{\yinclust}[3]{#1 \in \clust{#2}{#3}}
+\newcommand{\card}{\ell}
+\newcommand{\campbell}{h}
+\newcommand{\aff}{a}
+\newcommand{\Jcal}{\mathcal{J}}
+\newcommand{\Ytrue}{{Y}}
+\newcommand{\Ypred}{\hat{Y}}
+\newcommand{\Ysimu}{Y_{simu}}
+\newcommand{\camprandom}{H}
+\newcommand{\dime}{64}
+\newcommand{\Gammaref}{\Gamma^{\star}}
+\newcommand{\Gammapred}{\hat\Gamma^{\star}}
+\newcommand{\Gammasimu}{\Gamma_{simu}}
+\newcommand{\erreurproba}{\varepsilon}
+\newcommand{\erreurprobarelative}{\delta}
+\newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
+
+\newcommand{\nbgamma}{100}
+\newcommand{\nbpilot}{v}
+\newcommand{\ntrue}{n_{t}}
+\newcommand{\npred}{n_{pred}}
+\newcommand{\nsimu}{n_{\mathrm{simu}}}
+\newcommand{\Dspace}{\chi}
+\newcommand{\supp}{{\mathrm{supp}}}
+\newcommand{\thresh}{t}
+\newcommand{\estim}{\hat{E}}
+\newcommand{\nbsim}{m_{\mathrm{simu}}}
+\newcommand{\ntrain}{n_{\mathrm{train}}}
+\newcommand{\ntest}{n_{\mathrm{test}}}
+\newcommand{\eqdef}{:=}
+\newcommand{\Ypca}{Y^{\mathrm{pca}}}
+\newcommand{\Yproj}{Y_{\mathrm{proj}}}
+\newcommand{\nvar}{n_{v}}
+\newcommand{\nerr}{n_{e}}
+
+In this notebook we compute the error from the Importance Sampling
+
+# Estimator of the variance of the estimated probabilities
+
+$\var\left(\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)\right) = \frac{1}{\tilde{n}} \var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$.
+
+Considering a large sample $(\tilde{X}^{(k)})_{k=1}^{10^5}$ of $\tilde{X}$, an empirical estimator of $\var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$ is: $$\frac{1}{10^5-1}\sum_{k=1}^{10^5}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{10^5}^{\mathrm{true}}(\Gamm,j)\right]^2$$
+
+And then an approximation of the relative standard error of $\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)$ : $$\hat{e}(\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)) = \frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{10^5 -1}\sum_{k=1}^{10^5}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{10^5}^{\mathrm{true}}(\Gamm,j)\right]^2}}{\hat{P}_{10^5}^{\mathrm{true}}(\Gamm,j)}$$ 
+
+This relative standard error will be computed $\forall \Gamm \in (\Gamm^{r})_{r\in \{1,\dots,n_{\Gamm}\}}, \forall j \in \{1,\dots,\card\}$
+
+```{r}
+load("NewFitting_Charlie_v090821.RData")
+
+source("Campbell2D.R")
+source("Campbell_utils.R")
+source.all("GpOutput2D-main/GpOutput2D/R")
+```
+
+```{r}
+dim_map = c(64,64)
+
+z1 = seq(-90,90,l=dim_map[1])
+z2 = seq(-90,90,l=dim_map[2])
+```
+
+We sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
+
+```{r}
+set.seed(1234)
+n=10^5
+Xtilde = matrix(runif(n =5*n), ncol = 5)
+Xtilde = cbind(Xtilde, sample(1:10,size = n, replace = TRUE) / 10) 
+
+unif = runif(n) 
+Xtilde = cbind(Xtilde, (unif <= 8/13)*runif(n))
+
+Xtilde = cbind(Xtilde, rep(-1,n))
+Xtilde = transform_X(Xtilde)
+
+```
+
+
+We compute $\left(\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)})}\right){_{k \in \{1,\dots,10^5\}}}$ 
+
+```{r}
+Xtilde_phy = ((Xtilde + 1)/6)[,1:7]
+for(i in 1:5){
+  Xtilde_phy[,i] = Xtilde_phy[,i] * (df_bornes[i,2]-df_bornes[i,1]) + df_bornes[i,1]
+}
+Xtilde_phy[,6] = Xtilde_phy[,6]*10
+
+registerDoParallel(cores = 24)
+
+densite_vec = densite_ratio_full_vec(Xtilde_phy)
+```
+
+We sample $(\Gamma_{r})_{r \in \{1,\dots, n_{\Gamm}\}}$
+
+```{r}
+load("lloyd_res_true.RData")
+gamma_star = lloyd_res_true$gamma #the prototype maps obtained with the true maps
+
+set.seed(2)
+gamma_it_list = list()
+for(it in 1:100){
+  gamma_it_list[[it]] = lapply(1:5, function(i){gamma_star[[i]]*matrix(runif(64^2,0.8,1.2), ncol = 64, nrow = 64)})
+}
+```
+
+
+Compute $Y(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of real maps
+
+```{r}
+maps_true = Campbell2D(Xtilde,z1,z2)
+
+```
+
+Associate each of these $10^5$ maps to their voronoi cell for each $\Gamm^{r}$
+
+```{r}
+
+numeros_true = lapply(1:length(gamma_it_list),function(it){print(it)
+  get_numeros(maps_true[,,1:10^5], gamma_it_list[[it]])})
+
+
+```
+
+```{r}
+load("perf_proba.RData")
+```
+
+Computation of $\var\left(\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)\right)$ $\forall \Gamm \in (\Gamm^{r})_{r\in\{1,\dots,100\}}$ and $\forall j \in \{1,\dots,5\}$ with $\tilde{n} = 10^7$
+
+
+
+```{r}
+list_for_std = list()
+std_list = list()
+for(it in 1:length(gamma_it_list)){ #for all Gamma in (Gamma^r)
+  list_for_std[[it]] = Vectorize(function(i){densite_vec*(numeros_true[[it]] == i)})(1:5) 
+  std_list[[it]] = apply(list_for_std[[it]], 2, std)/apply(list_for_std[[it]],2,mean)/sqrt(10^7) #for all voronoi cells of Gamma, we compute the relative standard error
+}
+
+relative_std = unlist(std_list)
+
+```
+
+We plot the distribution of the errors
+
+```{r, fig.height = 5, fig.width = 5}
+boxplot(relative_std, col = "darkolivegreen2", ylab = "Proba. relative standard error", cex.lab=1.3, cex.axis = 1.3) 
+
+```
+## Estimator of the variance of the estimated centroid
+
+
+We have 
+$(\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))_{i} = \frac{\frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}}{\hat{P}_{\ntrue}^{\mathrm{true}}(\Gamm,j),}$ 
+with $\Ytrue_{,i}(\tilde{X}^{(k)})$ the ith pixel of the map $\Ytrue(\tilde{X}^{(k)})$
+
+The variance of the ratio of two random variables $A$ and $B$ can be approached by the following expression:
+$$\var\left(\frac{A}{B}\right) \approx \frac{\mu_{A}^{2}}{\mu_{B}^2}\left[\frac{\var(A)}{\mu_{A}^2}-2\frac{cov(A,B)}{\mu_A\mu_{B}} + \frac{\var(B)^2}{\mu_B^2}\right]~.$$ with $\mu_A,\mu_{B}$ the mean of $A$ and $B$.
+
+In our case,  we denote $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
+and $B = \hat{P}_{\ntrue}^{\mathrm{true}}(\Gamm,j)$
+
+
+Then, with a large sample $(\tilde{X}^{(k)})_{k=1}^{\nvar}$ of $\tilde{X}$, we can compute the empirical estimation of the needed quantities:
+
+  - $\hat{\mu_{A_{i}}} = \frac{1}{\nvar} \sum^{\nvar}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$
+  - $\hat{\var(A_{i})} = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\ntrue}_{k=1} \left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)^2$
+  - $\hat{\mu_{B}} = \hat{P}_{\nvar}^{\mathrm{true}}(\Gamm,j) =  \frac{1}{\nvar} \sum^{\nvar}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ 
+  - $\hat{\var(B)} = \frac{1}{\nvar} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)^2$
+  - $\hat{cov}(A_{i},B) = \frac{1}{\ntrue}\frac{1}{\nvar-1}\sum^{\nvar}_{k=1}\left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)$
+
+Then,  $\forall i \in \{1\dots64^2\}$, i.e. for each pixel, the standard error can be computed: 
+$$\hat{e}((\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))_{i}) = \sqrt{\hat{\var}\left((\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))_{i}\right)}~.$$
+
+Finally, the $90\%$-quantile over $i$ is computed for a given Voronoi cell $\clust{\Gamm}{j}$ to compute $\hat{e}^{90\%}(\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))$.
+
+
+First step : computation of $\Ytrue(\tilde{X}^{(k)})\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$
+
+```{r}
+maps_true = Campbell2D(Xtilde,z1,z2)
+
+
+weighted_map = t(matrix(maps_true, 64^2,10^5))*densite_vec
+
+rm(maps_true)
+```
+
+Second step : 
+
+Computation of $\var\left(\frac{A_{i}}{B}\right) \approx \frac{\mu_{A_{i}}^{2}}{\mu_{B}^2}\left[\frac{\var(A_{i})}{\mu_{A_{i}}}-2\frac{cov(A_{i},B)}{\mu_{A_{i}}\mu_{B}} + \frac{\var(B)^2}{\mu_B^2}\right]$ with $\mu_A,\mu_{B}$ $\forall i \in \{1,\dots,64^2\}$ and $\forall j \in \{1,\dots,5\}, \forall \Gamm \in (\Gamm^{r})$
+
+with $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
+and $B = \hat{P}_{\ntrue}^{\mathrm{true}}(\Gamm,j)$
+```{r}
+std_ratio_list = list()
+for(it in 1:length(gamma_it_list)){#for all Gamma
+  print(it)
+  std_ratio_list[[it]] = as.list(rep(0,5)) 
+  for(j in 1:5){#for all voronoi cells
+    map_loop = weighted_map #weighted map is the set of maps multiplied by the weights f_{x}/mu
+    densite_num = densite_vec*(numeros_true[[it]] == j) #densite_num is the vector of the weights multiplied by the characteristic function of the voronoi cell
+    for(i in 1:10^5){
+      if(numeros_true[[it]][i] != j){map_loop[i,] = rep(0,64^2)} #this 
+    } #map_loop is now the set of maps multiplied by the weights f_{x}/mu multiplied by the characteristic function of the voronoi cell
+    covariance = apply(map_loop,2,function(x){cov(x,densite_num)})/10^6 #this is the covariance between Ai and B for all i
+    moy1 = apply(map_loop,2, mean) #This is the empirical expectation of Ai for all i
+    moy2 = mean(densite_num) #This is the empirical expectation of B 
+    var1 = apply(map_loop,2,var)/10^6 #This is the empirical variance of Ai for all i
+    var2 = var(densite_num)/10^6 #This is the empirical variance of B
+    std_ratio_list[[it]][[j]] = sqrt(moy1^2/moy2^2*(var1/moy1^2+var2/moy2^2-2*covariance/moy1/moy2)) #This is the empirical standard error of the ratio
+
+  }
+}
+```
+
+Final step : Computational of the $90\%$-quantile over i of $\var\left(\frac{A_{i}}{B}\right)$
+```{r}
+quantile_std_ratio = lapply(1:5, function(i){std_ratio_list[[i]]})
+for(it in 1:5){for(j in 1:5){quantile_std_ratio[[it]][[j]] = quantile(quantile_std_ratio[[it]][[j]], 0.9)}}
+
+quantile_std_ratio = unlist(quantile_std_ratio)
+```
+
+We plot the distribution $\forall \Gamm \in (\Gamm^{r})_{r\in\{1,\dots,100\}}$ and $\forall j \in \{1,\dots,5\}$
+
+```{r, fig.height = 5, fig.width = 5}
+boxplot(quantile_std_ratio, col = "darkolivegreen2", ylab = "Centroid standard error",cex.lab=1.3, cex.axis = 1.3)
+```
+
+
+
+
+
+

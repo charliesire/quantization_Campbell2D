@@ -1,0 +1,164 @@
+---
+title: "Precised computation of the probabilities"
+output: html_notebook
+---
+
+
+
+\newcommand{\Ecal}{\mathcal{Y}}
+\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
+\newcommand{\Espbiais}[1]{\mathbb{E}_{\biais}\left[#1\right]}
+\newcommand{\centro}{\gamma}
+\newcommand{\Gamm}{\Gamma}
+\newcommand{\norm}[1]{\lVert #1 \lVert_{\Ecal}}
+\newcommand{\rep}{q_{\Gamm}}
+\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
+\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
+\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\Ecal}}
+\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\scalprodomega}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\biais}{\nu}
+\newcommand{\repo}{q^{0}_{\Gamm}}
+\newcommand{\Xtildek}{\tilde{X}^{k}}
+\newcommand{\Espprod}[1]{\mathbb{E}_{\Omega_{1}, \Omega_{2}}\left[#1\right]}
+\newcommand{\var}{\mathbb{V}}
+\newcommand{\clust}[2]{C^{#1}_{#2}}
+\newcommand{\yinclust}[3]{#1 \in \clust{#2}{#3}}
+\newcommand{\card}{\ell}
+\newcommand{\campbell}{h}
+\newcommand{\aff}{a}
+\newcommand{\Jcal}{\mathcal{J}}
+\newcommand{\Ytrue}{{Y}}
+\newcommand{\Ypred}{\hat{Y}}
+\newcommand{\Ysimu}{Y_{simu}}
+\newcommand{\camprandom}{H}
+\newcommand{\dime}{64}
+\newcommand{\Gammaref}{\Gamma^{\star}}
+\newcommand{\Gammapred}{\hat\Gamma_{\star}}
+\newcommand{\Gammasimu}{\Gamma_{simu}}
+\newcommand{\erreurproba}{\varepsilon}
+\newcommand{\erreurprobarelative}{\delta}
+\newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
+
+\newcommand{\nbgamma}{100}
+\newcommand{\nbpilot}{v}
+\newcommand{\ntrue}{n_{t}}
+\newcommand{\npred}{n_{pred}}
+\newcommand{\nsimu}{n_{\mathrm{simu}}}
+\newcommand{\Dspace}{\chi}
+\newcommand{\supp}{{\mathrm{supp}}}
+\newcommand{\thresh}{t}
+\newcommand{\estim}{\hat{E}}
+\newcommand{\nbsim}{m_{\mathrm{simu}}}
+\newcommand{\ntrain}{n_{\mathrm{train}}}
+\newcommand{\ntest}{n_{\mathrm{test}}}
+\newcommand{\eqdef}{:=}
+\newcommand{\Ypca}{Y^{\mathrm{pca}}}
+\newcommand{\Yproj}{Y_{\mathrm{proj}}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand\dsone{\mathds{1}}
+\newcommand{\Ecal}{\mathcal{E}}
+\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\centro}{\gamma}
+\newcommand{\Gamm}{\Gamma}
+\newcommand{\norm}[1]{\lVert #1 \lVert_{\mathcal{E}}}
+\newcommand{\rep}{q_{\Gamm}}
+\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
+\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
+\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\mathcal{E}}}
+\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
+\newcommand{\repo}{q^{0}_{\Gamm}}
+\newcommand{\Xtildek}{\tilde{X}^{k}}
+
+The idea here is to compute the probabilities associated to the optimal quantization $\Gamm^{\star}$ obtained in the notebook lloyd_true.Rmd, with a very large sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$.
+
+
+```{r}
+load("NewFitting_Charlie_v090821.RData")
+
+source.all("GpOutput2D-main/GpOutput2D/R")
+source("Campbell2D.R")
+source("Campbell_utils.R")
+```
+
+We get the optimal quantization 
+
+```{r}
+load("lloyd_res_true.RData")
+gamma_star = lloyd_res_true$gamma
+```
+
+```{r}
+dim_map = c(64,64)
+
+z1 = seq(-90,90,l=dim_map[1])
+z2 = seq(-90,90,l=dim_map[2])
+
+```
+
+We sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$
+
+```{r}
+set.seed(1234)
+n=10^7
+Xtilde = matrix(runif(n =5*n), ncol = 5)
+Xtilde = cbind(Xtilde, sample(1:10,size = n, replace = TRUE) / 10)
+
+unif = runif(n) 
+Xtilde = cbind(Xtilde, (unif <= 8/13)*runif(n))
+
+Xtilde = cbind(Xtilde, rep(-1,n))
+Xtilde = transform_X(Xtilde)
+
+
+
+```
+
+We compute the weights $\left(\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)})}\right){_{k \in \{1,\dots,10^7\}}}$, stored in the vector densite_vec
+
+```{r}
+Xtilde_phy = ((Xtilde + 1)/6)[,1:7]
+for(i in 1:5){
+  Xtilde_phy[,i] = Xtilde_phy[,i] * (df_bornes[i,2]-df_bornes[i,1]) + df_bornes[i,1]
+}
+Xtilde_phy[,6] = Xtilde_phy[,6]*10
+```
+
+```{r,  results='hide'}
+registerDoParallel(cores = 10)
+
+densite_vec = list()
+st = Sys.time()
+for(batch in 1:100){
+  print(batch)
+  densite_vec[[batch]] = foreach (it = 1:10^5, .combine = 'c') %dopar% {densite_ratio_full(as.numeric(Xtilde_phy[((batch-1)*10^5+1):(batch*10^5),][it,]))}
+  
+}
+
+
+
+
+```
+We compute the Voronoi cell associated to every $Y(\tilde{X}^{k})$
+
+```{r, results='hide'}
+numeros = c()
+for(it in 1:100){
+  print(it)
+  maps_true = Campbell2D(Xtilde[((it-1)*10^5+1):(it*10^5),], z1, z2)
+  numeros = c(numeros, get_numeros(maps_true,gamma_star))
+
+
+}
+rm(maps_true)
+
+```
+
+And for each voronoi cell, we compute $\hat{P}^{\mathrm{true}}_{\ntrue}(\Gamm^{\star},j) = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm^{\star}}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ 
+
+```{r}
+get_probas(numeros, unlist(densite_vec))
+```
+
