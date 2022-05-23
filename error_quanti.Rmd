@@ -80,7 +80,7 @@ load("NewFitting_Charlie_v090821.RData")
 
 source("Campbell2D.R")
 source("Campbell_utils.R")
-source.all("GpOutput2D-main/GpOutput2D/R")
+source.all("GpOutput2D-main")
 ```
 
 ```{r}
