@@ -78,7 +78,7 @@ The idea here is to compute the probabilities associated to the optimal quantiza
 ```{r}
 load("NewFitting_Charlie_v090821.RData")
 
-source.all("GpOutput2D-main/GpOutput2D/R")
+source.all("GpOutput2D-main/")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
