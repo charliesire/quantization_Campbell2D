@@ -78,7 +78,7 @@ We use the hyperparameters tuned in the notebook perf_probas.Rmd with the cross 
 ```{r}
 load("NewFitting_Charlie_v090821.RData")
 
-source.all("GpOutput2D-main/GpOutput2D/R")
+source.all("GpOutput2D-main")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
