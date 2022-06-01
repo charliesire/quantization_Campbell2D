@@ -1,5 +1,5 @@
 ---
-title: "Precised computation of the probabilities"
+title: "Accurate computation of the probabilities"
 output: html_notebook
 ---
 
@@ -78,7 +78,7 @@ The idea here is to compute the probabilities associated to the optimal quantiza
 ```{r}
 load("NewFitting_Charlie_v090821.RData")
 
-source.all("GpOutput2D-main")
+source.all("GpOutput2D-main/GpOutput2D/R")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
@@ -141,6 +141,8 @@ for(batch in 1:100){
 
 
 ```
+## With the true maps
+
 We compute the Voronoi cell associated to every $Y(\tilde{X}^{k})$
 
 ```{r, results='hide'}
@@ -158,7 +160,47 @@ rm(maps_true)
 
 And for each voronoi cell, we compute $\hat{P}^{\mathrm{true}}_{\ntrue}(\Gamm^{\star},j) = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm^{\star}}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ 
 
+Here are the probabilities obtained with the true maps
+
 ```{r}
 get_probas(numeros, unlist(densite_vec))
+```
+
+## With the predicted maps
+
+```{r}
+X_training = Xtilde[1:1300,]
+Y_training = Campbell2D(X_training,z1,z2)
+
+set.seed(1)
+fp = Fpca2d.Wavelets(Y_training, wf = "d4", boundary = "periodic", J = 1, ncoeff = 2000, rank = 6)
+
+  
+model = km_Fpca2d(formula = ~1, design = data.frame(x = X_training)[,1:7], response = fp, covtype = "matern5_2",control = list(trace = 0))
+```
+
+```{r}
+registerDoParallel(cores = 10)
+
+batch_size = 10^4 #we will compute the voronoi cell by batch of 10^4 maps
+
+numeros_pred = c()
+for(batch in 1:(nrow(Xtilde)%/%batch_size)){ #for each batch
+  if(batch %% 50 == 0){print(batch)}
+  Xtilde_batch = Xtilde[((batch-1)*batch_size+1):(batch*batch_size),] #we get the inputs of the batch
+  map_metamodel = foreach(i = 1:100, .combine = "c") %dopar% {predict.km_Fpca2d(object = model, newdata = data.frame(Xtilde_batch[((i-1)*100+1):(i*100),1:7]), type = "UK", compute = FALSE, checkNames = FALSE)$mean} #we predict the maps associated to these inputs
+  map_metamodel = array(map_metamodel, dim = c(64,64,10000)) 
+
+  numeros_pred = c(numeros_pred, get_numeros(map_metamodel,gamma_star)) #computed the associated voronoi cells number
+
+}
+
+numeros_pred[1:1300] = numeros[1:1300] #the training voronoi cell number are affected to the training maps
+```
+
+Here are the probabilities obtained with the predicted maps
+
+```{r}
+get_probas(numeros_pred, unlist(densite_vec))
 ```
 
