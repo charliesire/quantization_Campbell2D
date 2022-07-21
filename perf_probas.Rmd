@@ -33,15 +33,15 @@ output: html_notebook
 \newcommand{\camprandom}{H}
 \newcommand{\dime}{64}
 \newcommand{\Gammaref}{\Gamma^{\star}}
-\newcommand{\Gammapred}{\hat\Gamma_{\star}}
+\newcommand{\Gammapred}{\hat\Gamma^{\star}}
 \newcommand{\Gammasimu}{\Gamma_{simu}}
 \newcommand{\erreurproba}{\varepsilon}
-\newcommand{\erreurprobarelative}{\delta}
+\newcommand{\erreurprobarelative}{\epsilon_P^{MM}}
 \newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
 \newcommand{\nbgamma}{100}
 \newcommand{\nbpilot}{v}
-\newcommand{\ntrue}{n_{t}}
-\newcommand{\npred}{n_{pred}}
+\newcommand{\ntrue}{n_{\mathrm{maps}}}
+\newcommand{\npred}{n_{\mathrm{maps}}}
 \newcommand{\nsimu}{n_{\mathrm{simu}}}
 \newcommand{\Dspace}{\chi}
 \newcommand{\supp}{{\mathrm{supp}}}
@@ -53,8 +53,10 @@ output: html_notebook
 \newcommand{\eqdef}{:=}
 \newcommand{\Ypca}{Y^{\mathrm{pca}}}
 \newcommand{\Yproj}{Y_{\mathrm{proj}}}
+\newcommand{\nvar}{n_{v}}
+\newcommand{\nerr}{n_{e}}
 
-This notebook evaluates the precision of the metamodel on the evaluation of the probabilities
+This notebook evaluates the precision of the metamodel on the evaluation of the probabilities, by computing the relative probability error.
 
 ## Introduction 
 
@@ -63,16 +65,16 @@ The method is to :
   - Sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
   - Compute $Y(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of real maps
   - Compute $\hat{Y}(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of predicted maps from 1300 training maps
-  - Compute $(\Gamm^r)_{r \in \{1,\dots,100\}}$ from the $\Gamm^{\star}$ obtained by applying the lloyd algorithm with 10^6 maps (notebook lloyd_true.Rmd). A random change between 0 and $20\%$ is apply to $\Gamm^{\star}$
-  - Compute $\forall r \in \{1,\dots,100\}, \erreurprobarelative^{pred}_{n}(\Gamm^{r},j) = \frac{\mid  \hat{P}^{true}_{n}(\Gamm^{r},j) - \hat{P}^{pred}_{n}(\Gamm^{r},j) \mid}{\hat{P}^{true}_{n}(\Gamm^{r},j)}$
+  - Compute $(\Gamm^r)_{r \in \{1,\dots,100\}}$ from the $\Gamm^{\star}$ obtained by applying the Prototype Maps Algorithm with 10^6 maps (notebook lloyd_true.Rmd). A random change between 0 and $20\%$ is apply to $\Gamm^{\star}$
+  - Compute $\forall r \in \{1,\dots,100\}, \erreurprobarelative(n,\Gamm^{r},j) = \frac{\mid  \hat{P}_{n}(\Gamm^{r},j,\Ytrue) - \hat{P}_{n}(\Gamm^{r},j,\Ypred) \mid}{\hat{P}_{n}(\Gamm^{r},j,\Ytrue)}$ with $n= 10^5$
   
-  with $\hat{P}^{true}_{n}(\Gamm,j) = \frac{1}{n} \sum^{n}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)}}$, $\hat{P}^{pred}_{n}(\Gamm,j) = \frac{1}{n} \sum^{n}_{k=1} \mathbb{1}_{\yinclust{\Ypred(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)}}$ and $n= 10^5$
+ 
   
 
 ```{r}
 load("NewFitting_Charlie_v090821.RData")
 
-source.all("GpOutput2D-main")
+source.all("GpOutput2D-main/GpOutput2D/R")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
@@ -123,7 +125,7 @@ densite_vec = densite_ratio_full_vec(Xtilde_phy)
 
 ```
 
-## Get $\Gamm^{\star}$ from the notebook lloyd_true.Rmd
+## Get $\Gamm^{\star}$ from the notebook PMalgo_true.Rmd
 
 ```{r}
 load("lloyd_res_true.RData")
@@ -138,7 +140,7 @@ gamma_star = lloyd_res_true$gamma #the prototype maps obtained with the true map
 
 We will perform a cross validation step to tune the hyperparameters $\tilde{K}$ and $n_{pc}$ of the FPCA. 
 
-For all $\tilde{K}$ and $n_{pc}$, we compute : $\forall j \in {1,\dots, 5},\erreurprobarelative^{pred}_{10^4}(\Gamm^{\star},j)$. 
+For all $\tilde{K}$ and $n_{pc}$, we compute : $\forall j \in {1,\dots, 5},\erreurprobarelative(10^4,\Gamm^{\star},j)$. 
 
 And then we select the pair $\tilde{K}, n_{pc}$ that minimizes the maximum of these 5 relative error.
 
@@ -193,7 +195,7 @@ for(i in 1:nrow(grid_cv)){ #for each pair Ktilde, npc
 grid_cv[which.min(apply(df_cv_pred, 1, max)),] ##print the pair of hyperparameters minimizing the maximum of these empirical relative errors
 ```
 
-## Creation of the family $(\Gamma_{r})_{r \in \{1,\dots,100\}$
+## Creation of the family $(\Gamma_{r})_{r \in \{1,\dots,100\}}$
 
 ```{r}
 set.seed(2)
@@ -203,7 +205,7 @@ for(it in 1:100){
 }
 ```
 
-## Real maps
+## True maps
 
 Compute $Y(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of real maps
 
@@ -275,7 +277,7 @@ proba_predict = lapply(1:length(gamma_it_list), function(it){get_probas(numeros 
 
 ## Distribution of the errors 
 
-Compute the relative error and display the distribution 
+Compute the relative probability error and display the distribution 
 
 
 ```{r, fig.height = 5, fig.width = 5}

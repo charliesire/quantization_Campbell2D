@@ -2,7 +2,6 @@
 title: "Importance sampling performance metrics"
 output: html_notebook
 ---
-
 \newcommand{\Ecal}{\mathcal{Y}}
 \newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
 \newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
@@ -36,13 +35,12 @@ output: html_notebook
 \newcommand{\Gammapred}{\hat\Gamma^{\star}}
 \newcommand{\Gammasimu}{\Gamma_{simu}}
 \newcommand{\erreurproba}{\varepsilon}
-\newcommand{\erreurprobarelative}{\delta}
+\newcommand{\erreurprobarelative}{\epsilon_P^{MM}}
 \newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
-
 \newcommand{\nbgamma}{100}
 \newcommand{\nbpilot}{v}
-\newcommand{\ntrue}{n_{t}}
-\newcommand{\npred}{n_{pred}}
+\newcommand{\ntrue}{n_{\mathrm{maps}}}
+\newcommand{\npred}{n_{\mathrm{maps}}}
 \newcommand{\nsimu}{n_{\mathrm{simu}}}
 \newcommand{\Dspace}{\chi}
 \newcommand{\supp}{{\mathrm{supp}}}
@@ -57,24 +55,34 @@ output: html_notebook
 \newcommand{\nvar}{n_{v}}
 \newcommand{\nerr}{n_{e}}
 
-In this notebook we compute the error from the Importance Sampling
+The effect of the importance sampling (IS) on the quantization is assessed, for a given Voronoi cell $\clust{\Gamm}{j}$, through two metrics:
 
-# Estimator of the variance of the estimated probabilities
+- The IS coefficient of variation of the membership probability, $\epsilon_P^{IS}(\tilde{n},\Gamm^{r},j)$, which is an estimator of $\frac{\sqrt{\var\left(\hat{P}_{\tilde{n}}(\Gamm,j, \Ytrue)\right)}}{\hat{P}_{\tilde{n}}(\Gamm,j, \Ytrue)}$. It measures an
+ error due to the importance sampling in the estimation of the probability
+of the Voronoi cell n°$j$.
+- The IS centroid standard deviation, $\epsilon_{\Gamm}^{IS}(\ntrue,\Gamm^{r},j)$,
+which is related to the variance $\var\left(\estim_{\ntrue}(\Gamm,j,\Ytrue)\right)$. It characterizes the error coming from importance sampling in the estimation of the centroid of the Voronoi cell n°$j$. 
+More precisely, $\estim_{\ntrue}(\Gamm,j,\Ytrue)$ is a vector of the size of the maps, and we investigate the diagonal terms $(v_{i})_{i=1}^{64^2} = \var\left((\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i}\right)$ of the covariance matrix.  
+Finally, the $90\%$-quantile of these $64^2$ variances is computed, and its square root gives the metric $\epsilon_{\Gamm}^{IS}(\ntrue,\Gamm^{r},j)$. 
 
-$\var\left(\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)\right) = \frac{1}{\tilde{n}} \var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$.
 
-Considering a large sample $(\tilde{X}^{(k)})_{k=1}^{10^5}$ of $\tilde{X}$, an empirical estimator of $\var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$ is: $$\frac{1}{10^5-1}\sum_{k=1}^{10^5}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{10^5}^{\mathrm{true}}(\Gamm,j)\right]^2$$
 
-And then an approximation of the relative standard error of $\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)$ : $$\hat{e}(\hat{P}_{\tilde{n}}^{\mathrm{true}}(\Gamm,j)) = \frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{10^5 -1}\sum_{k=1}^{10^5}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{10^5}^{\mathrm{true}}(\Gamm,j)\right]^2}}{\hat{P}_{10^5}^{\mathrm{true}}(\Gamm,j)}$$ 
+# IS coefficient of variation of the membership probability
 
-This relative standard error will be computed $\forall \Gamm \in (\Gamm^{r})_{r\in \{1,\dots,n_{\Gamm}\}}, \forall j \in \{1,\dots,\card\}$
+Considering a large sample $(\tilde{X}^{(k)})_{k=1}^{\nvar}$ of $\tilde{X}$, an empirical estimator of $\var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$ is,
+$$\frac{1}{\nvar -1}\sum_{k=1}^{\nvar}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{\nvar}(\Gamm,j,\Ytrue)\right]^2~.$$
+
+Then an estimator of $\frac{\sqrt{\var\left(\hat{P}_{\tilde{n}}(\Gamm,j, \Ytrue)\right)}}{\hat{P}_{\tilde{n}}(\Gamm,j, \Ytrue)}$ is the IS relative standard deviation
+$$\epsilon_P^{IS}(\tilde{n},\Gamm^{r},j) = \frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{\nvar -1}\sum_{k=1}^{\nvar}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{\nvar}(\Gamm,j,\Ytrue)\right]^2}}{\hat{P}_{\nvar}(\Gamm,j,\Ytrue)}~.$$ 
+We work here with $\nvar = 10^5$ and $\tilde{n} = 10^7$.
+
 
 ```{r}
 load("NewFitting_Charlie_v090821.RData")
 
 source("Campbell2D.R")
 source("Campbell_utils.R")
-source.all("GpOutput2D-main")
+source.all("GpOutput2D-main/GpOutput2D/R")
 ```
 
 ```{r}
@@ -172,32 +180,33 @@ We plot the distribution of the errors
 boxplot(relative_std, col = "darkolivegreen2", ylab = "Proba. relative standard error", cex.lab=1.3, cex.axis = 1.3) 
 
 ```
-## Estimator of the variance of the estimated centroid
+## IS centroid standard deviation
 
 
 We have 
-$(\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))_{i} = \frac{\frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}}{\hat{P}_{\ntrue}^{\mathrm{true}}(\Gamm,j),}$ 
-with $\Ytrue_{,i}(\tilde{X}^{(k)})$ the ith pixel of the map $\Ytrue(\tilde{X}^{(k)})$
+$(\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i} = \frac{\frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}}{\hat{P}_{\ntrue}(\Gamm,j,\Ytrue)}$ 
+with $\Ytrue_{,i}(\tilde{X}^{(k)})$ the $i$th pixel of the map $\Ytrue(\tilde{X}^{(k)})$.
 
-The variance of the ratio of two random variables $A$ and $B$ can be approached by the following expression:
-$$\var\left(\frac{A}{B}\right) \approx \frac{\mu_{A}^{2}}{\mu_{B}^2}\left[\frac{\var(A)}{\mu_{A}^2}-2\frac{cov(A,B)}{\mu_A\mu_{B}} + \frac{\var(B)^2}{\mu_B^2}\right]~.$$ with $\mu_A,\mu_{B}$ the mean of $A$ and $B$.
+As detailed in \cite{Kempen}, the variance of the ratio of two random variables $A$ and $B$ can be approximated by the following expression:
+$$\var\left(\frac{A}{B}\right) \approx \frac{\mu_{A}^{2}}{\mu_{B}^2}\left[\frac{\var(A)}{\mu_{A}^2}-2\frac{cov(A,B)}{\mu_A\mu_{B}} + \frac{\var(B)}{\mu_B^2}\right]~.$$ with $\mu_A,\mu_{B}$ the mean of $A$ and $B$.
 
 In our case,  we denote $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
-and $B = \hat{P}_{\ntrue}^{\mathrm{true}}(\Gamm,j)$
+and $B = \hat{P}_{\ntrue}(\Gamm,j,\Ytrue)$
 
 
 Then, with a large sample $(\tilde{X}^{(k)})_{k=1}^{\nvar}$ of $\tilde{X}$, we can compute the empirical estimation of the needed quantities:
 
-  - $\hat{\mu_{A_{i}}} = \frac{1}{\nvar} \sum^{\nvar}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$
-  - $\hat{\var(A_{i})} = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\ntrue}_{k=1} \left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)^2$
-  - $\hat{\mu_{B}} = \hat{P}_{\nvar}^{\mathrm{true}}(\Gamm,j) =  \frac{1}{\nvar} \sum^{\nvar}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ 
-  - $\hat{\var(B)} = \frac{1}{\nvar} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)^2$
-  - $\hat{cov}(A_{i},B) = \frac{1}{\ntrue}\frac{1}{\nvar-1}\sum^{\nvar}_{k=1}\left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)$
+- $\hat\mu_{A_{i}} = \frac{1}{\nvar} \sum^{\nvar}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$
+- $\hat{\var}(A_{i}) = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)^2$
+- $\hat\mu_{B} = \hat{P}_{\nvar}(\Gamm,j,\Ytrue) =  \frac{1}{\nvar} \sum^{\nvar}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ 
+- $\hat{\var}(B) = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)^2$
+- $\hat{cov}(A_{i},B) = \frac{1}{\ntrue} \frac{1}{\nvar-1}\sum^{\nvar}_{k=1}\left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)$
 
-Then,  $\forall i \in \{1\dots64^2\}$, i.e. for each pixel, the standard error can be computed: 
-$$\hat{e}((\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))_{i}) = \sqrt{\hat{\var}\left((\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))_{i}\right)}~.$$
+Then,  $\forall i \in \{1\dots64^2\}$, i.e. for each pixel, the standard deviation can be computed : 
+$$\hat{e}((\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i}) = \sqrt{\hat{\var}\left((\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i}\right)}.$$
 
-Finally, the $90\%$-quantile over $i$ is computed for a given Voronoi cell $\clust{\Gamm}{j}$ to compute $\hat{e}^{90\%}(\estim_{\ntrue}^{\mathrm{true}}(\Gamm,j))$.
+Finally, the $90\%$-quantile over $i$ is computed for a given Voronoi cell $\clust{\Gamm}{j}$ to compute the IS standard deviation $\epsilon_{\Gamm}^{IS}(\ntrue,\Gamm,j)$, with $\ntrue = 10^6$ and $\nvar = 10^5$.
+
 
 
 First step : computation of $\Ytrue(\tilde{X}^{(k)})\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$
@@ -216,7 +225,7 @@ Second step :
 Computation of $\var\left(\frac{A_{i}}{B}\right) \approx \frac{\mu_{A_{i}}^{2}}{\mu_{B}^2}\left[\frac{\var(A_{i})}{\mu_{A_{i}}}-2\frac{cov(A_{i},B)}{\mu_{A_{i}}\mu_{B}} + \frac{\var(B)^2}{\mu_B^2}\right]$ with $\mu_A,\mu_{B}$ $\forall i \in \{1,\dots,64^2\}$ and $\forall j \in \{1,\dots,5\}, \forall \Gamm \in (\Gamm^{r})$
 
 with $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
-and $B = \hat{P}_{\ntrue}^{\mathrm{true}}(\Gamm,j)$
+and $B = \hat{P}_{\ntrue}(\Gamm,j,\Ytrue)$
 ```{r}
 std_ratio_list = list()
 for(it in 1:length(gamma_it_list)){#for all Gamma

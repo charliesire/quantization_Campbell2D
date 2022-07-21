@@ -206,7 +206,7 @@ plot_map = function(map, max = NULL, min = NULL){
   gamma_toplot$f = as.numeric(map)
   if(is.null(max))
   {p = ggplot(gamma_toplot) + geom_raster(aes(x = Var1, y = Var2, fill = f)) + scale_fill_continuous(type = "viridis",direction = -1, name = "h") + theme_bw()}
-  else{p = ggplot(gamma_toplot) + geom_raster(aes(x = Var1, y = Var2, fill = f)) + scale_fill_continuous(type = "viridis", direction = -1, limits = c(min, max), name = "h") + theme_bw()}
+  else{p = ggplot(gamma_toplot) + geom_raster(aes(x = Var1, y = Var2, fill = f)) + scale_fill_continuous(type = "viridis", direction = -1, limits = c(min, max), name = "h") + theme_bw()  + theme(legend.text = element_text(size=13),legend.title = element_text(size=13))}
   return(p)
 }
 

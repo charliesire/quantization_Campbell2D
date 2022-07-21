@@ -3,8 +3,6 @@ title: "Accurate computation of the probabilities"
 output: html_notebook
 ---
 
-
-
 \newcommand{\Ecal}{\mathcal{Y}}
 \newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
 \newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
@@ -35,16 +33,15 @@ output: html_notebook
 \newcommand{\camprandom}{H}
 \newcommand{\dime}{64}
 \newcommand{\Gammaref}{\Gamma^{\star}}
-\newcommand{\Gammapred}{\hat\Gamma_{\star}}
+\newcommand{\Gammapred}{\hat\Gamma^{\star}}
 \newcommand{\Gammasimu}{\Gamma_{simu}}
 \newcommand{\erreurproba}{\varepsilon}
-\newcommand{\erreurprobarelative}{\delta}
+\newcommand{\erreurprobarelative}{\epsilon_P^{MM}}
 \newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
-
 \newcommand{\nbgamma}{100}
 \newcommand{\nbpilot}{v}
-\newcommand{\ntrue}{n_{t}}
-\newcommand{\npred}{n_{pred}}
+\newcommand{\ntrue}{n_{\mathrm{maps}}}
+\newcommand{\npred}{n_{\mathrm{maps}}}
 \newcommand{\nsimu}{n_{\mathrm{simu}}}
 \newcommand{\Dspace}{\chi}
 \newcommand{\supp}{{\mathrm{supp}}}
@@ -56,23 +53,10 @@ output: html_notebook
 \newcommand{\eqdef}{:=}
 \newcommand{\Ypca}{Y^{\mathrm{pca}}}
 \newcommand{\Yproj}{Y_{\mathrm{proj}}}
-\DeclareMathOperator*{\argmax}{arg\,max}
-\DeclareMathOperator*{\argmin}{arg\,min}
-\newcommand\dsone{\mathds{1}}
-\newcommand{\Ecal}{\mathcal{E}}
-\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
-\newcommand{\centro}{\gamma}
-\newcommand{\Gamm}{\Gamma}
-\newcommand{\norm}[1]{\lVert #1 \lVert_{\mathcal{E}}}
-\newcommand{\rep}{q_{\Gamm}}
-\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
-\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
-\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\mathcal{E}}}
-\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
-\newcommand{\repo}{q^{0}_{\Gamm}}
-\newcommand{\Xtildek}{\tilde{X}^{k}}
+\newcommand{\nvar}{n_{v}}
+\newcommand{\nerr}{n_{e}}
 
-The idea here is to compute the probabilities associated to the optimal quantization $\Gamm^{\star}$ obtained in the notebook lloyd_true.Rmd, with a very large sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$.
+The idea here is to compute the probabilities associated to the optimal quantization $\Gamm^{\star}$ obtained in the notebook PMalgo_true.Rmd, with a very large sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$.
 
 
 ```{r}
@@ -158,7 +142,7 @@ rm(maps_true)
 
 ```
 
-And for each voronoi cell, we compute $\hat{P}^{\mathrm{true}}_{\ntrue}(\Gamm^{\star},j) = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm^{\star}}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ 
+And for each voronoi cell, we compute $\hat{P}_{\tilde{n}}(\Gamm^{\star},j, \Ytrue) = \frac{1}{\tilde{n}} \sum^{\tilde{n}}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm^{\star}}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ with $\tilde{n} = 10^7$
 
 Here are the probabilities obtained with the true maps
 

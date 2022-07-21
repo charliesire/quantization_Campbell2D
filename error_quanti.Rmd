@@ -69,18 +69,21 @@ output: html_notebook
 \newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
 \newcommand{\repo}{q^{0}_{\Gamm}}
 \newcommand{\Xtildek}{\tilde{X}^{k}}
+\newcommand{\nerr}{n_{e}}
 
+With the notebooks PMalgo_true.Rmd and PMalgo_pred.Rmd, we obtained two different sets of prototype maps : $\Gamm^{\star}$ obtained with the maps and $\hat{\Gamm}^{\star}$ with the predicted maps. 
 
-With the notebooks lloyd_true.Rmd and lloyd_predict.Rmd, we obtained two different sets of prototype maps : $\Gamm^{\star}$ obtained with the maps and $\hat{\Gamm}^{\star}$ with the predicted maps. 
-
-Therefore, to evaluate the quality of the representive maps obtained in the predicted case, we compute the relative error $\frac{\hat{e}(\Gammapred)-\hat{e}(\Gammaref)}{\hat{e}(\Gammaref)}$ with $\hat{e}(\Gamm) = \left(\frac{1}{10^6} \sum_{k = 1}^{10^6} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}\right)^{\frac{1}{2}}$ the empirical quantization error. It evaluates the prototypes maps obtained with the predicted maps compared to the ones obtained with the real maps.
+Therefore, to evaluate the quality of the representive maps obtained in the predicted case, we compute the excess in quantization error due to the metamodel,
+    $$\epsilon_\Gamma^{MM} = \frac{\hat{e}(\Gammapred)-\hat{e}(\Gammaref)}{\hat{e}(\Gammaref)}~,
+$$ where $\hat{e}(\Gamm) = \left(\frac{1}{\nerr} \sum_{k = 1}^{\nerr} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}\right)^{\frac{1}{2}}$ is an empirical quantization error, with $\nerr = 10^6$ here.
+    
 
 ```{r}
 load("NewFitting_Charlie_v090821.RData")
 
 source("Campbell2D.R")
 source("Campbell_utils.R")
-source.all("GpOutput2D-main")
+source.all("GpOutput2D-main/GpOutput2D/R")
 ```
 
 ```{r}
@@ -137,7 +140,8 @@ get_distance = function(maps, gamma){
 }
 ```
 
-The function sum_quanti_error compute $\sum_{k = 1}^{n} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$
+The function sum_quanti_error compute $\hat{e}(\Gamm)$ 
+
 ```{r}
 sum_quanti_error = function(maps, gamma, densite_vec){
     distances = get_distance(maps,gamma)
@@ -145,7 +149,7 @@ sum_quanti_error = function(maps, gamma, densite_vec){
 }
 ```
 
-We compute $\sum_{k = 1}^{10^6} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ for $\Gamm = \Gamm^{\star}$ and  $\Gamm = \hat{\Gamm}^{\star}$
+We compute $\hat{e}(\Gamm)$ for $\Gamm = \Gamm^{\star}$ and  $\Gamm = \hat{\Gamm}^{\star}$
 
 ```{r, results='hide'}
 sum_error_true = 0
@@ -160,10 +164,10 @@ for(it in 1:10){
 
 rm(maps)
 ```
-We now compute the relative difference between the quantization error obtained with the predicted maps and with the true maps.
+We now compute the excess in quantization error due to the metamodel.
 
 ```{r}
-abs(sqrt(sum_error_true/10^6) - sqrt(sum_error_pred/10^6))/sqrt(sum_error_pred/10^6)
+(sqrt(sum_error_pred/10^6) - sqrt(sum_error_true/10^6))/sqrt(sum_error_true/10^6)
 ```
 
 
