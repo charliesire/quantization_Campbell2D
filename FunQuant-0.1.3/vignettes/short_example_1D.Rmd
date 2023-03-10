@@ -1,0 +1,75 @@
+---
+title: "short_example_1D"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{short_example_1D}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(FunQuant)
+
+
+library(randtoolbox)
+library(evd)
+```
+
+We will investigate the function $f(x) = sin(x_{1})*sin(x_{2})$
+
+We can introduce the design of experiments 
+
+```{r}
+design = as.data.frame(halton(400,2))*2-1
+outputs = apply(sin(design), 1, prod)
+```
+
+We can first perform quantization without considering the probabilistic distribution of the inputs. This is classical K-means quantization.
+
+```{r}
+
+res_proto = proto_map_algo(nb_cells = 4, outputs = outputs, multistart = 6) 
+
+res_proto
+```
+We can also consider the probabilistic distribution of the inputs. 
+
+```{r}
+f2 = function(x){
+  res = 0
+  ptrunc = pgev(-1, loc=-0.4,scale=0.1) + 1 - pgev(1, loc=-0.4,scale=0.1)
+  if(x>=-1 & x < 1){res = dgev(x, loc=-0.4,scale=0.1)/(1-ptrunc)}
+  return(res)
+}
+f1 = function(x){
+  if(x > -1 & x < 1){return(1/2)}
+  else{return(0)}
+}
+fX = function(x){f1(x[1])*f2(x[2])}
+```
+
+The design of experiments is a sobol sequence that can be considered as a uniform distribution, which is often the case. 
+
+```{r}
+g = function(x){
+  if(sum(x > -1) == length(x) & sum(x < 1) == length(x)){return(1/4)}
+  else{return(0)}
+}
+```
+
+Then we can perform a probabilistic quantization
+
+```{r}
+density_ratio = compute_density_ratio(f = fX, g = g, inputs = design)
+res_proto_2 = proto_map_algo(nb_cells = 4, outputs = outputs, multistart = 6,density_ratio = density_ratio) 
+
+
+res_proto_2
+```

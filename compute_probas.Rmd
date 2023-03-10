@@ -3,66 +3,18 @@ title: "Accurate computation of the probabilities"
 output: html_notebook
 ---
 
-\newcommand{\Ecal}{\mathcal{Y}}
-\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
-\newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
-\newcommand{\Espbiais}[1]{\mathbb{E}_{\biais}\left[#1\right]}
-\newcommand{\centro}{\gamma}
 \newcommand{\Gamm}{\Gamma}
-\newcommand{\norm}[1]{\lVert #1 \lVert_{\Ecal}}
-\newcommand{\rep}{q_{\Gamm}}
-\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
-\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
-\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\Ecal}}
-\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
-\newcommand{\scalprodomega}[2]{\Esp{\scalprodE{#1}{#2}}}
 \newcommand{\biais}{\nu}
-\newcommand{\repo}{q^{0}_{\Gamm}}
-\newcommand{\Xtildek}{\tilde{X}^{k}}
-\newcommand{\Espprod}[1]{\mathbb{E}_{\Omega_{1}, \Omega_{2}}\left[#1\right]}
-\newcommand{\var}{\mathbb{V}}
-\newcommand{\clust}[2]{C^{#1}_{#2}}
 \newcommand{\yinclust}[3]{#1 \in \clust{#2}{#3}}
-\newcommand{\card}{\ell}
-\newcommand{\campbell}{h}
-\newcommand{\aff}{a}
-\newcommand{\Jcal}{\mathcal{J}}
 \newcommand{\Ytrue}{{Y}}
-\newcommand{\Ypred}{\hat{Y}}
-\newcommand{\Ysimu}{Y_{simu}}
-\newcommand{\camprandom}{H}
-\newcommand{\dime}{64}
-\newcommand{\Gammaref}{\Gamma^{\star}}
-\newcommand{\Gammapred}{\hat\Gamma^{\star}}
-\newcommand{\Gammasimu}{\Gamma_{simu}}
-\newcommand{\erreurproba}{\varepsilon}
-\newcommand{\erreurprobarelative}{\epsilon_P^{MM}}
-\newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
-\newcommand{\nbgamma}{100}
-\newcommand{\nbpilot}{v}
-\newcommand{\ntrue}{n_{\mathrm{maps}}}
-\newcommand{\npred}{n_{\mathrm{maps}}}
-\newcommand{\nsimu}{n_{\mathrm{simu}}}
-\newcommand{\Dspace}{\chi}
-\newcommand{\supp}{{\mathrm{supp}}}
-\newcommand{\thresh}{t}
-\newcommand{\estim}{\hat{E}}
-\newcommand{\nbsim}{m_{\mathrm{simu}}}
-\newcommand{\ntrain}{n_{\mathrm{train}}}
-\newcommand{\ntest}{n_{\mathrm{test}}}
-\newcommand{\eqdef}{:=}
-\newcommand{\Ypca}{Y^{\mathrm{pca}}}
-\newcommand{\Yproj}{Y_{\mathrm{proj}}}
-\newcommand{\nvar}{n_{v}}
-\newcommand{\nerr}{n_{e}}
+\newcommand{\clust}[2]{C^{#1}_{#2}}
 
 The idea here is to compute the probabilities associated to the optimal quantization $\Gamm^{\star}$ obtained in the notebook PMalgo_true.Rmd, with a very large sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$.
 
 
 ```{r}
-load("NewFitting_Charlie_v090821.RData")
-
-source.all("GpOutput2D-main/GpOutput2D/R")
+source.all("GpOutput2D-main")
+source.all("FunQuant-0.1.3/R")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
@@ -111,15 +63,15 @@ Xtilde_phy[,6] = Xtilde_phy[,6]*10
 ```
 
 ```{r,  results='hide'}
-registerDoParallel(cores = 10)
+registerDoParallel(cores = 24)
 
-densite_vec = list()
+density_ratio = list()
 st = Sys.time()
 for(batch in 1:100){
-  print(batch)
-  densite_vec[[batch]] = foreach (it = 1:10^5, .combine = 'c') %dopar% {densite_ratio_full(as.numeric(Xtilde_phy[((batch-1)*10^5+1):(batch*10^5),][it,]))}
-  
+  if(batch%%10==0){print(batch)}
+  density_ratio[[batch]] = compute_density_ratio(fX,g, Xtilde_phy[((batch-1)*10^5+1):(batch*10^5),])
 }
+
 
 
 
@@ -130,11 +82,11 @@ for(batch in 1:100){
 We compute the Voronoi cell associated to every $Y(\tilde{X}^{k})$
 
 ```{r, results='hide'}
-numeros = c()
+cell_numbers = c()
 for(it in 1:100){
   print(it)
   maps_true = Campbell2D(Xtilde[((it-1)*10^5+1):(it*10^5),], z1, z2)
-  numeros = c(numeros, get_numeros(maps_true,gamma_star))
+  cell_numbers = c(cell_numbers, get_cell_numbers(maps_true,gamma_star))
 
 
 }
@@ -147,7 +99,8 @@ And for each voronoi cell, we compute $\hat{P}_{\tilde{n}}(\Gamm^{\star},j, \Ytr
 Here are the probabilities obtained with the true maps
 
 ```{r}
-get_probas(numeros, unlist(densite_vec))
+probas_true = get_probas(density_ratio = unlist(density_ratio), cell_numbers = cell_numbers, cells = 1:5)
+probas_true
 ```
 
 ## With the predicted maps
@@ -157,14 +110,14 @@ X_training = Xtilde[1:1300,]
 Y_training = Campbell2D(X_training,z1,z2)
 
 set.seed(1)
-fp = Fpca2d.Wavelets(Y_training, wf = "d4", boundary = "periodic", J = 1, ncoeff = 2000, rank = 6)
 
-  
-model = km_Fpca2d(formula = ~1, design = data.frame(x = X_training)[,1:7], response = fp, covtype = "matern5_2",control = list(trace = 0))
+metamodel = fit_metamodel(design_train = data.frame(x = X_training)[,1:7], outputs_train = Y_training, seed = 1, ncoeff = 2000, npc = 6,control = list(trace = 0))
+
+
+
 ```
 
 ```{r}
-registerDoParallel(cores = 10)
 
 batch_size = 10^4 #we will compute the voronoi cell by batch of 10^4 maps
 
@@ -172,19 +125,20 @@ numeros_pred = c()
 for(batch in 1:(nrow(Xtilde)%/%batch_size)){ #for each batch
   if(batch %% 50 == 0){print(batch)}
   Xtilde_batch = Xtilde[((batch-1)*batch_size+1):(batch*batch_size),] #we get the inputs of the batch
-  map_metamodel = foreach(i = 1:100, .combine = "c") %dopar% {predict.km_Fpca2d(object = model, newdata = data.frame(Xtilde_batch[((i-1)*100+1):(i*100),1:7]), type = "UK", compute = FALSE, checkNames = FALSE)$mean} #we predict the maps associated to these inputs
+  map_metamodel = foreach(i = 1:100, .combine = "c") %dopar% {predict_outputs(metamodel_fitted = metamodel, design_test = data.frame(Xtilde_batch[((i-1)*100+1):(i*100),1:7]), type = "UK", compute = FALSE)} #we predict the maps associated to these inputs
   map_metamodel = array(map_metamodel, dim = c(64,64,10000)) 
-
-  numeros_pred = c(numeros_pred, get_numeros(map_metamodel,gamma_star)) #computed the associated voronoi cells number
+  numeros_pred = c(numeros_pred, get_cell_numbers(outputs = map_metamodel,gamma = gamma_star)) #computed the associated voronoi cells number
 
 }
 
-numeros_pred[1:1300] = numeros[1:1300] #the training voronoi cell number are affected to the training maps
+numeros_pred[1:1300] = cell_numbers[1:1300] #the training voronoi cell number are affected to the training maps
 ```
 
 Here are the probabilities obtained with the predicted maps
 
 ```{r}
-get_probas(numeros_pred, unlist(densite_vec))
+probas_pred = get_probas(density_ratio = unlist(density_ratio), cell_numbers = numeros_pred, cells = 1:5)
+print(probas_pred)
+print(probas_true)
 ```
 

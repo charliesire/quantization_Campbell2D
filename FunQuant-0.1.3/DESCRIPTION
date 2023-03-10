@@ -1,0 +1,21 @@
+Package: FunQuant
+Type: Package
+Title: Perform quantization of random outputs using importance sampling and metamodels
+Version: 0.1.1
+Author: Charlie SIRE
+Maintainer: Charlie SIRE <charlie.sire@irsn.fr>
+Description: Perform Lloyd's algorithm with importance sampling weights. Build a metamodel for spatial outputs and tune the hyperparameters using different metrics. Assess performance metrics around the quantization. 
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    knitr,
+    randtoolbox,
+    rmarkdown,
+    ggplot2,
+    evd,
+    gridExtra
+Imports: abind, waveslim, DiceKriging, foreach, dismo, randomForest, GpOutput2D
+Remotes: tranvivielodie/GpOutput2D/GpOutput2D
+RoxygenNote: 7.2.3
+VignetteBuilder: knitr

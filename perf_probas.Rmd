@@ -3,58 +3,12 @@ title: "Metamodel performance metrics"
 output: html_notebook
 ---
 
-\newcommand{\Ecal}{\mathcal{Y}}
-\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
-\newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
-\newcommand{\Espbiais}[1]{\mathbb{E}_{\biais}\left[#1\right]}
-\newcommand{\centro}{\gamma}
 \newcommand{\Gamm}{\Gamma}
-\newcommand{\norm}[1]{\lVert #1 \lVert_{\Ecal}}
-\newcommand{\rep}{q_{\Gamm}}
-\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
-\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
-\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\Ecal}}
-\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
-\newcommand{\scalprodomega}[2]{\Esp{\scalprodE{#1}{#2}}}
 \newcommand{\biais}{\nu}
-\newcommand{\repo}{q^{0}_{\Gamm}}
-\newcommand{\Xtildek}{\tilde{X}^{k}}
-\newcommand{\Espprod}[1]{\mathbb{E}_{\Omega_{1}, \Omega_{2}}\left[#1\right]}
-\newcommand{\var}{\mathbb{V}}
-\newcommand{\clust}[2]{C^{#1}_{#2}}
-\newcommand{\yinclust}[3]{#1 \in \clust{#2}{#3}}
-\newcommand{\card}{\ell}
-\newcommand{\campbell}{h}
-\newcommand{\aff}{a}
-\newcommand{\Jcal}{\mathcal{J}}
 \newcommand{\Ytrue}{{Y}}
 \newcommand{\Ypred}{\hat{Y}}
-\newcommand{\Ysimu}{Y_{simu}}
-\newcommand{\camprandom}{H}
-\newcommand{\dime}{64}
-\newcommand{\Gammaref}{\Gamma^{\star}}
-\newcommand{\Gammapred}{\hat\Gamma^{\star}}
-\newcommand{\Gammasimu}{\Gamma_{simu}}
-\newcommand{\erreurproba}{\varepsilon}
 \newcommand{\erreurprobarelative}{\epsilon_P^{MM}}
-\newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
-\newcommand{\nbgamma}{100}
-\newcommand{\nbpilot}{v}
-\newcommand{\ntrue}{n_{\mathrm{maps}}}
-\newcommand{\npred}{n_{\mathrm{maps}}}
-\newcommand{\nsimu}{n_{\mathrm{simu}}}
-\newcommand{\Dspace}{\chi}
-\newcommand{\supp}{{\mathrm{supp}}}
-\newcommand{\thresh}{t}
-\newcommand{\estim}{\hat{E}}
-\newcommand{\nbsim}{m_{\mathrm{simu}}}
-\newcommand{\ntrain}{n_{\mathrm{train}}}
-\newcommand{\ntest}{n_{\mathrm{test}}}
-\newcommand{\eqdef}{:=}
-\newcommand{\Ypca}{Y^{\mathrm{pca}}}
-\newcommand{\Yproj}{Y_{\mathrm{proj}}}
-\newcommand{\nvar}{n_{v}}
-\newcommand{\nerr}{n_{e}}
+
 
 This notebook evaluates the precision of the metamodel on the evaluation of the probabilities, by computing the relative probability error.
 
@@ -72,9 +26,8 @@ The method is to :
   
 
 ```{r}
-load("NewFitting_Charlie_v090821.RData")
-
-source.all("GpOutput2D-main/GpOutput2D/R")
+source.all("GpOutput2D-main")
+source.all("FunQuant-0.1.3/R")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
@@ -121,7 +74,7 @@ Xtilde_phy[,6] = Xtilde_phy[,6]*10
 
 registerDoParallel(cores = 24)
 
-densite_vec = densite_ratio_full_vec(Xtilde_phy)
+density_ratio = compute_density_ratio(fX, g, Xtilde_phy)
 
 ```
 
@@ -142,57 +95,26 @@ We will perform a cross validation step to tune the hyperparameters $\tilde{K}$ 
 
 For all $\tilde{K}$ and $n_{pc}$, we compute : $\forall j \in {1,\dots, 5},\erreurprobarelative(10^4,\Gamm^{\star},j)$. 
 
-And then we select the pair $\tilde{K}, n_{pc}$ that minimizes the maximum of these 5 relative error.
+And then we select the pair $\tilde{K}, n_{pc}$ that minimizes the mean of these 5 relative error.
 
-```
-ncoeff_vec=  seq(1000,4000, 500) #we will test these values of ncoeff_vec
-
-model_cv = list() 
-for(i in 1:length(ncoeff_vec)){ #for each ncoeff
-  set.seed(1)
-  print(i)
-  ncoeff = ncoeff_vec[i]
-  fp = Fpca2d.Wavelets(Y_training, wf = "d4", boundary = "periodic", J = 1, ncoeff = ncoeff, rank = 6) #we apply fpca with Ktilde = ncoeff and npc = 6
-  model_cv[[i]] = km_Fpca2d(formula = ~1, design = data.frame(x = X_training)[,1:7], response = fp, covtype = "matern5_2",control = list(trace = 0), nugget.estim = TRUE) ##we fit a GP on each of these 6 axis
-
-}
-  
+```{r}
+model_cv = create_models_tuning(outputs = Y_training, ncoeff_vec = seq(1000,4000, 500), npc = 6, formula = ~1, design = data.frame(x = X_training)[,1:7],control = list(trace = 0), nugget.estim = TRUE)
 ```
 
 
-```
+```{r}
 npc_vec = 2:6 #These are the testes values for npc
-
-grid_cv = expand.grid(ncoeff_vec, npc_vec) ##we will try all the combinations of npc, Ktilde
+ncoeff_vec = seq(1000,4000, 500)
 n_cv = 10^4 
 df_cv_pred = data.frame()
-iter = 1
-maps_true_cv = Campbell2D(Xtilde[1301:(n_cv+1300),],z1,z2) #we compute 10^4 maps
+Y_test = Campbell2D(Xtilde[1301:(n_cv+1300),],z1,z2) #we compute 10^4 maps
 
+perf_probas = probas_training_test(outputs_train = Y_training, outputs_test = Y_test, density_ratio = density_ratio[1301:(1300+n_cv)], gamma = gamma_star, model_tuning = model_cv, ncoeff_vec = ncoeff_vec, npc_vec = npc_vec, design_train = data.frame(x = X_training)[,1:7], design_test =  data.frame(Xtilde[1301:(n_cv+1300),1:7]))
 
-numeros_true_cv = get_numeros(maps_true_cv, gamma_star) #we associate each map to its voronoi cell
+errors = perf_probas$error
 
-proba_true_cv = get_probas(numeros = numeros_true_cv, densite_vec = densite_vec[1301:(1300+n_cv)]) #we compute the probabilities
-
-
-df_cv_pred = data.frame()
-for(i in 1:nrow(grid_cv)){ #for each pair Ktilde, npc
-  print(i)
-  ncoeff = grid_cv[i,1] 
-  npc = grid_cv[i,2]
-  indice_coeff = which(ncoeff_vec == ncoeff)
-  fp = Fpca2d.Wavelets(Y_training, wf = "d4", boundary = "periodic", J = 1, ncoeff = ncoeff, rank = npc) ##We apply fpca with the values of the hyperparameters
-  model = lapply(1:npc, function(k){model_cv[[indice_coeff]][[k]]}) #we select the npc first GP metamodel computed previously 
-  map_metamodel_cv = predict.km_Fpca2d(object = model, newdata = data.frame(Xtilde[1301:(n_cv+1300),1:7]), type = "UK", compute = FALSE, checkNames = FALSE, fpca = fp)$mean #we predict 10^4 maps
-  numeros_pred_cv = get_numeros(map_metamodel_cv, gamma_star) #we compute the voronoi cell associated to each map
-
-  proba_pred_cv = get_probas(numeros = numeros_pred_cv, densite_vec = densite_vec[1301:(1300+n_cv)]) #We compute the predicted probabilities
-  err_rel = abs(proba_true_cv - proba_pred_cv)/proba_true_cv #Compute the empirical relative errors
-  df_cv_pred = rbind(df_cv_pred, err_rel)     
-
-}
-
-grid_cv[which.min(apply(df_cv_pred, 1, max)),] ##print the pair of hyperparameters minimizing the maximum of these empirical relative errors
+best_params = errors[,1:2][which.min(apply(errors[,3:7], 1, mean)),]
+best_params
 ```
 
 ## Creation of the family $(\Gamma_{r})_{r \in \{1,\dots,100\}}$
@@ -214,20 +136,11 @@ maps_true = Campbell2D(Xtilde,z1,z2)
 
 ```
 
-Associate each of these $10^5$ maps to their voronoi cell for each $\Gamm^{r}$
-
-```{r,  results='hide'}
-
-numeros_true = lapply(1:length(gamma_it_list),function(it){print(it)
-  get_numeros(maps_true[,,1:10^5], gamma_it_list[[it]])})
-
-
-```
 
 Compute the probabilities for each $\Gamm^{r}$
 
 ```{r}
-proba_true = lapply(1:length(gamma_it_list), function(it){get_probas(numeros = numeros_true[[it]], densite_vec = densite_vec[1:10^5])})
+proba_true = lapply(1:length(gamma_it_list), function(it){get_probas(density_ratio = density_ratio[1:10^5], outputs = maps_true[,,1:10^5],gamma = gamma_it_list[[it]])})
 
 rm(maps_true)
 ```
@@ -239,12 +152,7 @@ Predict the $10^5$ maps with the tuned hyperparameters
 ```{r}
 registerDoParallel(cores = 24)
 
-set.seed(1)
-fp = Fpca2d.Wavelets(Y_training, wf = "d4", boundary = "periodic", J = 1, ncoeff = 2000, rank = 6) #fpca
-
-  
-model = km_Fpca2d(formula = ~1, design = data.frame(x = X_training)[,1:7], response = fp, covtype = "matern5_2",control = list(trace = 0)) # fit GP on each axis
-
+metamodel = fit_metamodel(design_train = data.frame(x = X_training)[,1:7], outputs_train = Y_training, seed = 1, ncoeff = 2000, npc = 6,control = list(trace = 0))
 
 
 ```
@@ -252,26 +160,18 @@ model = km_Fpca2d(formula = ~1, design = data.frame(x = X_training)[,1:7], respo
 ```{r}
 set.seed(1234)
 
-map_metamodel = predict.km_Fpca2d(object = model, newdata = data.frame(Xtilde[,1:7]), type = "UK", compute = FALSE, checkNames = FALSE)$mean #predict the maps
+maps_metamodel = predict_outputs(metamodel_fitted = metamodel, design_test = data.frame(Xtilde[,1:7])) #predict the maps
 
-map_metamodel[,,1:1300] = Y_training
-
-```
-
-Compute the predicted voronoi cells
-```{r,  results='hide'}
-
-numeros_predict = lapply(1:length(gamma_it_list),function(it){print(it)
-  get_numeros(map_metamodel[,,1:10^5], gamma_it_list[[it]])})
-
+maps_metamodel[,,1:1300] = Y_training
 
 ```
 
-And now the predicted probabilities
+Compute the predicted probabilities
 
 ```{r}
-proba_predict = lapply(1:length(gamma_it_list), function(it){get_probas(numeros = numeros_predict[[it]], densite_vec = densite_vec[1:10^5])})
+proba_predict = lapply(1:length(gamma_it_list), function(it){get_probas(density_ratio = density_ratio[1:10^5], outputs = maps_metamodel[,,1:10^5],gamma = gamma_it_list[[it]])})
 
+rm(maps_metamodel)
 
 ```
 

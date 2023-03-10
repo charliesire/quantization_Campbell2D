@@ -4,66 +4,18 @@ output: html_notebook
 ---
 
 
-\newcommand{\Ecal}{\mathcal{Y}}
-\newcommand{\Esp}[1]{\mathbb{E}\left[#1\right]}
-\newcommand{\Espf}[1]{\mathbb{E}_{f_{X}}\left[#1\right]}
-\newcommand{\Espbiais}[1]{\mathbb{E}_{\biais}\left[#1\right]}
-\newcommand{\centro}{\gamma}
 \newcommand{\Gamm}{\Gamma}
-\newcommand{\norm}[1]{\lVert #1 \lVert_{\Ecal}}
-\newcommand{\rep}{q_{\Gamm}}
-\newcommand{\qgs}{q_{{\Gamm}^{\star}}}
-\newcommand{\qgk}{q_{{\Gamm}^{[k]}}}
-\newcommand{\scalprodE}[2]{\langle #1,#2\rangle_{\Ecal}}
-\newcommand{\scalprod}[2]{\Esp{\scalprodE{#1}{#2}}}
-\newcommand{\scalprodomega}[2]{\Esp{\scalprodE{#1}{#2}}}
 \newcommand{\biais}{\nu}
-\newcommand{\repo}{q^{0}_{\Gamm}}
-\newcommand{\Xtildek}{\tilde{X}^{k}}
-\newcommand{\Espprod}[1]{\mathbb{E}_{\Omega_{1},\Omega_{2}}\left[#1\right]}
-\newcommand{\var}{\mathbb{V}}
-\newcommand{\clust}[2]{C^{#1}_{#2}}
-\newcommand{\yinclust}[3]{#1 \in \clust{#2}{#3}}
-\newcommand{\card}{\ell}
 \newcommand{\campbell}{h}
-\newcommand{\aff}{a}
-\newcommand{\Jcal}{\mathcal{J}}
-\newcommand{\Ytrue}{{Y}}
-\newcommand{\Ypred}{\hat{Y}}
-\newcommand{\Ysimu}{Y_{simu}}
-\newcommand{\camprandom}{H}
-\newcommand{\dime}{64}
-\newcommand{\Gammaref}{\Gamma^{\star}}
-\newcommand{\Gammapred}{\hat\Gamma_{\star}}
-\newcommand{\Gammasimu}{\Gamma_{simu}}
-\newcommand{\erreurproba}{\varepsilon}
-\newcommand{\erreurprobarelative}{\delta}
-\newcommand{\erreurprobarelativecoastal}{\erreurprobarelative}
 
-\newcommand{\nbgamma}{100}
-\newcommand{\nbpilot}{v}
-\newcommand{\ntrue}{n_{t}}
-\newcommand{\npred}{n_{pred}}
-\newcommand{\nsimu}{n_{\mathrm{simu}}}
-\newcommand{\Dspace}{\chi}
-\newcommand{\supp}{{\mathrm{supp}}}
-\newcommand{\thresh}{t}
-\newcommand{\estim}{\hat{E}}
-\newcommand{\nbsim}{m_{\mathrm{simu}}}
-\newcommand{\ntrain}{n_{\mathrm{train}}}
-\newcommand{\ntest}{n_{\mathrm{test}}}
-\newcommand{\eqdef}{:=}
-\newcommand{\Ypca}{Y^{\mathrm{pca}}}
-\newcommand{\Yproj}{Y_{\mathrm{proj}}}
 
 This notebook performs the Prototype Maps Algorithm in the Campbell2D case with the true Campbell maps.
 
 ## Introduction 
 
 ```{r}
-load("NewFitting_Charlie_v090821.RData")
-
-source.all("GpOutput2D-main/GpOutput2D/R")
+source.all("GpOutput2D-main")
+source.all("FunQuant-0.1.3/R")
 source("Campbell2D.R")
 source("Campbell_utils.R")
 ```
@@ -124,11 +76,16 @@ Xtilde_phy[,6] = Xtilde_phy[,6]*10
 
 registerDoParallel(cores = 24)
 
-densite_vec = foreach(it = 1:10, .combine = "c") %dopar% {
-  densite_ratio_full_vec(Xtilde_phy[((it-1)*10^5 + 1):(it*10^5),])
-}
+density_ratio = foreach(batch = 1:20)%do%{
+  print(batch)
+  compute_density_ratio(fX, g, Xtilde_phy[((batch-1)*5*10^4+1):(batch*5*10^4),])}
+
+  
 
 
+```
+```{r}
+save.image("PMalgo_true.RData")
 ```
 
 
@@ -137,10 +94,9 @@ densite_vec = foreach(it = 1:10, .combine = "c") %dopar% {
 maps_true is a list of 10 elements : each element is a batch of $10^5$ maps
 ```{r}
 
-maps_true = lapply(1:10, function(it){
+maps_true = lapply(1:20, function(it){
     print(it)
-    Campbell2D(Xtilde[((it-1)*10^5+1):(it*10^5),], z1, z2)})
-
+    Campbell2D(Xtilde[((it-1)*5*10^4+1):(it*5*10^4),], z1, z2)})
 
 
 
@@ -151,7 +107,7 @@ We sample randomly $\Gamm_{0}$
 ```{r}
 
 set.seed(709000)
-indices = sample(1:10^5, 5)
+indices = sample(1:(5*10^4), 5)
 
 gamma = lapply(1:5, function(j){maps_true[[1]][,,indices[j]]})
 
@@ -160,46 +116,18 @@ save(gamma, file = "gamma_0.RData")
 
 ## Prototype Maps Algorithm algorithm
 
-```{r}
-proto_map_algo = function(gamma, maps, densite_vec){
-  n = dim(maps[[1]])[3]*length(maps) #nb of maps
-  card = length(gamma) #nb of prototype maps
-    for (i in 1:100){ #budget
-      print(i)
-      gamma_new <<- list() #Initilize the new prototype maps
-      proba_cluster = c()
-      numeros = Vectorize(function(it){get_numeros(maps[[it]],gamma)})(1:length(maps)) #Associate each map to its Voronoi cell
-      for (j in 1:card){ #for each Voronoi cell
-        estim_1 = rep(0, dim_map[1]*dim_map[2]) ## Compute estim_1*n 
-        for(batch in 1:length(maps)){ ## For each batch of maps_true
-          estim_1 = estim_1 + apply(t(matrix(maps[[batch]][,,numeros[,batch] == j],nrow = dim_map[1]*dim_map[2], ncol = sum(numeros[,batch] == j)))*densite_vec[((batch-1)*10^5 + 1):(batch*10^5)][numeros[,batch] == j],2, sum) ## Sum the Y(X)f/nu of the cell
-        }
-        estim_2 = sum(densite_vec[as.numeric(numeros) == j]) ## Sum the f/nu(X) of the cell
-        centroid = estim_1/estim_2 ## Compute the ratio of the two estimators
-        proba_cluster = c(proba_cluster, estim_2/n) ## Store the estimated probability mass of the cell
-
-        gamma_new[[j]] <<- matrix(centroid, ncol = ncol(gamma[[j]])) ## store the centroid in gamma_new
-  
-      }
-      check_fixed_point = 0 #check_fixed_point checks if gamma_new is different the previous gamma
-      for (m in 1:card){
-        check_fixed_point = check_fixed_point + distance_gamma(gamma_new[[m]], gamma)$dist
-      
-      }
-      if (check_fixed_point == 0){break} #if they are equal, then break
-      water_volume = c()  #we will sort the prototype maps by increasing water volume
-      for (k in 1:card){water_volume = c(water_volume, sum(gamma_new[[k]]))}
-      for(k in 1:card){gamma[[rank(water_volume)[k]]] = gamma_new[[k]]}
-      }
-    return(list(gamma = gamma, iterations = i, numeros = numeros, proba = proba_cluster))  # return the optimal gamma, the number of iterations, the cells of each map and the probabilities associated to the cells
-}
-```
-
 
 ```{r, results='hide'}
-lloyd_res_true = proto_map_algo(gamma, maps_true, densite_vec)
+lloyd_res_true = proto_map_algo(gamma = gamma, outputs = maps_true, density_ratio = density_ratio, batch = TRUE, print_progress = TRUE)
+
 
 ```
+```{r}
+ee = estim_num_centroid(outputs = maps_true, cell_numbers = cccc, density_ratio = density_ratio, cell = 1, batch = TRUE)
+
+ee2 = estim_num_centroid(outputs = abind(maps_true[[1]], maps_true[[2]], along = 3), cell_numbers = unlist(cccc), density_ratio = unlist(density_ratio), cell = 1, batch = FALSE)
+```
+
 
 Visualisation of the obtained prototype maps.
 
@@ -209,5 +137,6 @@ for(i in 1:5){print(plot_map(lloyd_res_true$gamma[[i]], min = min(unlist(lloyd_r
 
 ```{r}
 rm(maps_true)
+save.image("PMalgo_true.RData")
 save(lloyd_res_true, file = "lloyd_res_true.RData")
 ```

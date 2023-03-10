@@ -2,7 +2,6 @@
 
 load("NewFitting_Charlie_v090821.RData")
 
-library(GGally)
 library(sp)
 #library(raster)
 library(ggplot2)
@@ -25,7 +24,7 @@ library(orthogonalsplinebasis)
 # distance_func computes the distance between two maps
 distance_func = function(A1,A2){
   return(sqrt(sum((A1-A2)^2)))
-  
+
 }
 
 #distance_gamma computes the distance between a map and a set of maps a returns the distance and the closest map of the set
@@ -37,7 +36,7 @@ distance_gamma = function(x, gamma){
     distance = c(distance, distance_func(x, gamma[[i]]))
   }
   return(list(cellule = which.min(distance), dist = min(distance)))
-  
+
 }
 # list_loi_exp is a list containing the empirical observation of the variables related to the offshore conditions
 
@@ -58,19 +57,19 @@ proba_for_gpd = mean(list_loi_exp[["S"]] <= 0.55)
 ## The computation of the density function is directly related to the empirical density.
 #For the surge, we add an information : the surge above 0.55 follows a gpd density. The density of the surge is also truncated between 0 and 2.5
 
-densite_S_base = function(x){density(list_loi_exp[[2]],  from = x, to = x, n = 1)$y[1]*(x <= 0.55) + as.numeric(dgpd(x,loc = 0.55, scale = fit$fitted.values[1], shape = fit$fitted.values[2]))*(x > 0.55)*(1-proba_for_gpd)}
+density_S_base = function(x){density(list_loi_exp[[2]],  from = x, to = x, n = 1)$y[1]*(x <= 0.55) + as.numeric(dgpd(x,loc = 0.55, scale = fit$fitted.values[1], shape = fit$fitted.values[2]))*(x > 0.55)*(1-proba_for_gpd)}
 
 offset = 0.65 # We will also add an offset representing an increase of the Surge peak. Then the surge is in the interval [offset, 2.5]
 
-cste_trunc_S = stats::integrate(Vectorize(densite_S_base), lower = -10, upper = 0)$value + (1 - proba_for_gpd)*stats::integrate(Vectorize(densite_S_base), lower = 2.5 - offset, upper = 10)$value
+cste_trunc_S = stats::integrate(Vectorize(density_S_base), lower = -10, upper = 0)$value + (1 - proba_for_gpd)*stats::integrate(Vectorize(density_S_base), lower = 2.5 - offset, upper = 10)$value
 
 
-densite_i = function(x, i){
+density_i = function(x, i){
   if (i %in% c(1,3,4,5)){
     res = density(list_loi_exp[[i]], from = x, to = x, n = 1)$y[1]}
   else if (i == 2){
     if((x>=offset) & (x <= 2.5)){
-    res = densite_S_base(x-offset)/(1-cste_trunc_S)
+    res = density_S_base(x-offset)/(1-cste_trunc_S)
     }
     else{res = 0}
   }
@@ -84,11 +83,11 @@ bornes_inf = c()
 bornes_sup = c()
 
 for(i in 1:5){
-  densite_df = data.frame(seq(-15,15,l=5000),d = Vectorize(function(x){densite_i(x,i)})(seq(-15,15,l=5000)))
-  indice_inf = which.min(densite_df$d == 0) - 1
-  indice_sup = which.min(densite_df[(indice_inf+1):nrow(densite_df),"d"] != 0) 
-  bornes_inf = c(bornes_inf, densite_df[indice_inf, 1])
-  bornes_sup = c(bornes_sup, densite_df[indice_sup + indice_inf,1])
+  density_df = data.frame(seq(-15,15,l=5000),d = Vectorize(function(x){density_i(x,i)})(seq(-15,15,l=5000)))
+  indice_inf = which.min(density_df$d == 0) - 1
+  indice_sup = which.min(density_df[(indice_inf+1):nrow(density_df),"d"] != 0)
+  bornes_inf = c(bornes_inf, density_df[indice_inf, 1])
+  bornes_sup = c(bornes_sup, density_df[indice_sup + indice_inf,1])
 }
 
 
@@ -96,12 +95,12 @@ df_bornes = data.frame(bornes_inf = bornes_inf[1], bornes_sup = bornes_sup[1])
 for(i in 2:5){df_bornes = rbind(df_bornes, c(bornes_inf[i], bornes_sup[i]))}
 
 
-densite_xu = function(x){
+density_xu = function(x){
   res = 1
   for (i in c(1,3,4,5)){
-    res = res * densite_i(x[i],i)
+    res = res * density_i(x[i],i)
   }
-  res = res *  densite_i(x[2],2)
+  res = res *  density_i(x[2],2)
   return(res)
 }
 
@@ -112,7 +111,7 @@ densite_xu = function(x){
 #sum_water_signal sums the signals of tide and surge and takes the maximum
 
 sum_water_signal = function(x){
-  signal_T = x[1]*cos(2*pi/2.5*seq(-12,12,l=1001)) 
+  signal_T = x[1]*cos(2*pi/2.5*seq(-12,12,l=1001))
   function_S = function(t){
     t_pic = x[3]
     if(t > t_pic){return(max(0,x[2]*(1-(t-t_pic)/x[5])))}
@@ -122,39 +121,38 @@ sum_water_signal = function(x){
   return(max(signal_S+signal_T))
 }
 
-q_x = 1
-for (i in 1:5){q_x = q_x/(bornes_sup[i]-bornes_inf[i])}
-
-## Densite_ratio_full computes the probability f_{X} / nu
-
-densite_ratio_full = function(x){
+fX = function(x){
   qte_eau = sum_water_signal(x)
-  if (qte_eau <= 0.7*4.76){
+  if(qte_eau <= 0.7*4.76){
     p_rup = 10^-4
     if(x[7]==0){
-      return(densite_xu(x[1:5])/q_x*(1-p_rup)/(5/13))
+      return(density_xu(x[1:5])*(1-p_rup))
     }
     else{
-      return(densite_xu(x[1:5])/q_x*p_rup/(8/13))
+      return(density_xu(x[1:5])*p_rup)
     }
   }
   if (qte_eau > 0.7*4.76){
-    
+
     p_rup = 1/2
-    
+
     if(x[7]==0){
-      return(densite_xu(x[1:5])/q_x*(1-p_rup)/(5/13))
+      return(density_xu(x[1:5])*(1-p_rup))
     }
     else{
-      return(densite_xu(x[1:5])/q_x*p_rup/(8/13))
+      return(density_xu(x[1:5])*p_rup*1/10)
     }
   }
 }
 
+q_x = 1
+for (i in 1:5){q_x = q_x/(bornes_sup[i]-bornes_inf[i])}
 
-densite_ratio_full_vec = function(X){
-  return(Vectorize(function(i){densite_ratio_full(as.numeric(X[i,]))})(1:nrow(X)))
+g = function(x){
+  if(x[7] == 0){return(q_x*5/13)}
+  else{return(q_x*8/13*1/10)}
 }
+
 
 ## Transform X converts X to the interval from [0,1]^7 to [-1,5]^7
 
@@ -163,9 +161,8 @@ transform_X = function(X){
     X[,i] = -1 + 6*X[,i]
   }
   return(X)
-  
-}
 
+}
 
 transform_X_from_phy = function(X){
   for(i in 1:5){
@@ -174,30 +171,6 @@ transform_X_from_phy = function(X){
   X[,6] = X[,6]/10
   return(transform_X(X))
 }
-
-## Get voronoi cells
-
-#get_numeros computes the voronoi cell number associated to each map of a map database
-
-get_numeros = function(maps, gamma){
-  return(Vectorize(function(it){distance_gamma(maps[,,it], gamma)$cellule})(1:dim(maps)[3]))
-}
-
-#get_proba computes the probability associated to each voronoi cell
-
-get_probas = function(numeros, densite_vec, cells = 1:5){
-  probas = c()
-  for(cell in cells){
-    if(sum(numeros == cell) > 0){
-      probas = c(probas, sum(densite_vec[numeros == cell])/length(densite_vec))
-    }
-    else{probas = c(probas, 0)}
-  }
-  
-  return(probas)
-}
-
-
 
 ## Plot the campbell maps
 

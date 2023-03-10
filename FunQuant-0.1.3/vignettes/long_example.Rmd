@@ -1,0 +1,253 @@
+---
+title: "long_example"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{long_example}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width=8, 
+  fig.height=6
+)
+```
+
+```{r setup}
+library(FunQuant)
+
+library(randtoolbox)
+library(ggplot2)
+library(evd)
+library(gridExtra)
+```
+
+```{r}
+set.seed(14)
+```
+
+We define the spatial function we investigate here, taking as inputs a vector in $\mathbb{R}^2$, and returning a map 20x20.
+
+```{r}
+func2D <- function(X){
+  Zgrid <- expand.grid(z1 = seq(-5,5,l=20),z2 = seq(-5,5,l=20))
+  n<-nrow(X)
+  Y <- lapply(1:n, function(i){(X[i,2] > -0.1)*X[i,2]*X[i,1]*exp(-((0.8*Zgrid$z1+0.2*Zgrid$z2-10*X[i,1])**2)/(60*X[i,1]**2))*(Zgrid$z1-Zgrid$z2)*cos(X[i,1]*4)^2*sin(X[i,2]*4)^2})
+  Ymaps<- array(unlist(Y),dim=c(20,20,n))
+  return(abs(Ymaps))
+}
+```
+
+We create a function to plot the spatial outputs 
+
+```{r}
+plot_map = function(map, max = NULL, min = NULL){
+  gamma_toplot = expand.grid(seq(-5,5,l=20),seq(-5,5,l=20))
+  gamma_toplot$f = as.numeric(map)
+  if(is.null(max))
+  {p = ggplot(gamma_toplot) + geom_raster(aes(x = Var1, y = Var2, fill = f)) + scale_fill_continuous(type = "viridis",direction = -1, name = "h") + theme_bw()}
+  else{p = ggplot(gamma_toplot) + geom_raster(aes(x = Var1, y = Var2, fill = f)) + scale_fill_continuous(type = "viridis", direction = -1, limits = c(min, max), name = "h") + theme_bw()  + theme(legend.text = element_text(size=13),legend.title = element_text(size=13))}
+  return(p)
+}
+```
+
+
+We define the density function of the random variable X. Its support is $[-1,1]^2$
+
+```{r}
+f2 = function(x){
+  res = 0
+  ptrunc = pgev(-1, loc=-0.4,scale=0.1) + 1 - pgev(1, loc=-0.4,scale=0.1)
+  if(x>=-1 & x < 1){res = dgev(x, loc=-0.4,scale=0.1)/(1-ptrunc)}
+  return(res)
+}
+f1 = function(x){
+  if(x > -1 & x < 1){return(1/2)}
+  else{return(0)}
+}
+fX = function(x){f1(x[1])*f2(x[2])}
+```
+
+We define the importance sampling density function
+
+```{r}
+g = function(x){
+  if(sum(x > -1) == length(x) & sum(x < 1) == length(x)){return(1/4)}
+  else{return(0)}
+}
+```
+
+We introduce the design of experiments
+
+```{r}
+design = as.data.frame(halton(400,2))*2-1
+outputs = func2D(design)
+```
+
+We plot example of the maps
+
+```{r}
+
+plot_list_examples = list(plot_map(outputs[,,2]), plot_map(outputs[,,241]))
+
+do.call("grid.arrange", c(plot_list_examples, ncol=2))
+```
+We can note that 182 of the 400 outputs are maps with only 0 values
+
+```{r}
+sum(Vectorize(function(i){abs(sum(outputs[,,i]))})(1:dim(outputs)[3]) == 0)
+```
+We compute the importance sampling weights
+```{r}
+density_ratio = compute_density_ratio(f = fX, g = g, inputs = design)
+
+```
+
+We choose the euclidean distance
+```{r}
+distance_func = function(A1,A2){return(sqrt(sum((A1-A2)^2)))}
+```
+
+We perform the quantization without metamodel, only with the 400 computed maps 
+
+```{r}
+sum_depth = Vectorize(function(i){sum(outputs[,,i])})(1:dim(outputs)[3])
+gamma = lapply(1:5, function(i){outputs[,,which.min(abs(as.numeric(quantile(sum_depth,c(0,0.6,0.7,0.8,0.9))[i]) - sum_depth))[1]]}) #gamma will be the starting set of prototypes of the quantization. We choose an maps of only 0, and the maps with increasing sum of pixels
+
+res_proto = proto_map_algo(gamma = gamma, outputs = outputs, density_ratio = density_ratio, distance_func = distance_func) 
+gamma_star_apriori = res_proto$gamma #This is the optimal set of prototype maps obtained with the 400 maps without metamodel
+
+```
+
+Now we tune the hyperparameters of the metamodel.
+Our metamodel will be made of a classifier indicating whether a map is full of 0 or not first, and then Functional Principal Components Analysis combined with kriging to predict the maps that are not classified as full of 0. 
+
+We start by tuning the parameters npc and ncoeff of the FPCA, focusing only on the maps that are not full of 0.
+
+We use the function rmse_f_fold that computes, for each pair of tested hyperparameters, a map indicating at each pixel the Root Mean Square error between the values predicted by k-fold cross validation and the real values. 
+
+```{r}
+npc_vec = 2:5
+ncoeff_vec = c(100,200,300,400)
+list_rmse_k_fold = rmse_k_fold(outputs = outputs[,, sum_depth > 0], design = design[sum_depth > 0,], nb_folds = 10, npc_vec = npc_vec, ncoeff_vec = ncoeff_vec, seed = 10, control = list(trace = FALSE)) 
+quantile_90 = sapply(list_rmse_k_fold$outputs_rmse, function(x){quantile(x, 0.9)}) #We take the quantile 90% of the rmse maps
+
+best_params = list_rmse_k_fold$grid_cv[quantile_90 == min(quantile_90),] #We identify the pairs of parameters minimizing the quantile 90%
+
+best_params
+
+plot_map(list_rmse_k_fold$outputs_rmse[[2]])
+```
+
+We can also tune the hyperparameters regarding the relative error made when computing the Voronoï cells membership probabilities (for a given set of prototypes gamma) with the predicted maps instead of the true maps. We use the function probas_k_fold to this end.
+
+```{r}
+list_probas_k_fold = probas_k_fold(outputs = outputs[,, sum_depth > 0], design = design[sum_depth > 0,], nb_folds = 10, density_ratio = density_ratio[sum_depth >0], gamma = gamma_star_apriori, distance_func = distance_func, npc_vec = npc_vec, ncoeff_vec = ncoeff_vec, seed = 10, control = list(trace = FALSE))
+
+```
+
+Once we have the hyperparameters of the FPCA, we can tune the hyperparameters of the random forests classifier. 
+
+Here we choose to tune the hyperparameters "nodesize" and "classwt", and we use the function rf_rmse_k_fold that does the same as rmse_k_fold but by integrating the random forest in the metamodel scheme, and focuses on the classifier hyperparemeters. Thus this function considers all the maps, even the ones full of 0.
+
+```{r}
+df_search = expand.grid(classwt1 = seq(0.2,0.8,0.3), nodesize = c(1,3,5))
+list_search = list("nodesize" = as.list(df_search[,2]), "classwt" = lapply(1:nrow(df_search), function(i){c(df_search[i,1], 1-df_search[i,1])}))
+list_rf_rmse_k_fold = rf_rmse_k_fold(design = design,outputs = outputs, threshold_classification = 0, list_search = list_search, nb_folds = 10, ncoeff = 200, npc = 2, control = list(trace = FALSE), seed = 10)
+quantile_90_rf = sapply(list_rf_rmse_k_fold$outputs_rmse, function(x){quantile(x, 0.9)})
+
+best_params_rf = df_search[quantile_90_rf == min(quantile_90_rf),]
+best_params_rf
+
+plot_map(list_rf_rmse_k_fold$outputs_rmse[[1]])
+```
+
+Likewise, rf_probas_k_fold does the same as probas_k_fold but integrates the random forests classifier, focusing on the classifier hyperparameters.
+
+```{r}
+list_rf_probas_k_fold = rf_probas_k_fold(design = design,outputs = outputs, density_ratio = density_ratio, gamma = gamma_star_apriori, distance_func = distance_func,threshold_classification = 0, list_search = list_search, nb_folds = 10, ncoeff = 200, npc = 2, control = list(trace = FALSE), seed = 10)
+
+```
+
+Once we have the hyperparameters for both the FPCA and the classifier, we can predict maps at new inputs.
+
+```{r}
+#We generate a sample of inputs with density g
+design_test = as.data.frame(matrix(runif(2*10^4), ncol=2)*2-1)
+#We compute the true outputs
+outputs_test = func2D(design_test)
+#We predict the outputs
+outputs_pred = predict_outputs(design_train = design, design_test = design_test, outputs_train = outputs, seed = 10, ncoeff = 200, npc = 2, control = list(trace = FALSE), classification = TRUE, control_classification = list("nodesize" = 1, classwt = c(0.5,0.5)), threshold_classification = 0)
+#We compute the importance sampling weights
+density_ratio_pred = compute_density_ratio(fX,g,design_test)
+
+```
+
+And we can perform the quantization on our $10^4$ predicted maps.
+
+```{r}
+
+# We perform quantization
+res_proto_pred = proto_map_algo(gamma = gamma_star_apriori, outputs = outputs_pred, density_ratio = density_ratio_pred, distance_func = distance_func, trace = FALSE)
+
+```
+We plot the obtained prototype maps
+
+```{r}
+list_plots_pred = list()
+for(i in 1:length(res_proto_pred$gamma)){
+  list_plots_pred[[i]] = plot_map(res_proto_pred$gamma[[i]])
+}
+do.call("grid.arrange", c(list_plots_pred, ncol=2))
+```
+
+
+We estimate the relative standard deviation of the membership probabilities of the obtained optimal Voronoi cells.
+
+```{r}
+res_std_probas = std_proba(outputs_pred, gamma_list = list(res_proto_pred$gamma), density_ratio = density_ratio_pred, distance_func = distance_func, cells = 1:5, nv = 10^4)
+
+res_std_probas
+```
+
+We also estimate the standard deviation of the estimation of each optimal prototype pixel
+
+```{r}
+res_std_centroid = std_centroid(outputs = outputs_pred, gamma_list = list(res_proto_pred$gamma), density_ratio = density_ratio_pred, distance_func = distance_func, cells = 1:5, nv = 10^4)
+
+#Then we compute the quantile 90% of each of these standard deviation maps
+quantiles_90_std = sapply(res_std_centroid[[1]], function(x){quantile(x, 0.9)})
+
+list_plots_std = list()
+for(i in 1:length(res_proto_pred$gamma)){
+  list_plots_std[[i]] = plot_map(res_std_centroid[[1]][[i]])
+}
+do.call("grid.arrange", c(list_plots_std, ncol=2))
+
+
+```
+
+We now confirm the precision of the metamodel by comparing the probabilities obtained with the true maps and the predicted maps for the optimal prototypes
+
+```{r}
+probas_true = get_probas(density_ratio = density_ratio_pred, gamma = res_proto_pred$gamma, outputs = outputs_test, distance_func = distance_func)
+probas_pred = res_proto_pred$probas
+
+probas_true
+probas_pred
+```
+
+We also check that the quantization error obtained with the predicted maps is close to the one obtained with the true maps
+
+```{r}
+res_proto_test = proto_map_algo(gamma = gamma_star_apriori, outputs = outputs_test, density_ratio = density_ratio_pred, distance_func = distance_func, trace = FALSE)
+quanti_error_test = quanti_error(outputs = outputs_test, gamma = res_proto_test$gamma, density_ratio = density_ratio_pred, distance_func = distance_func)
+quanti_error_pred = quanti_error(outputs = outputs_test, gamma = res_proto_pred$gamma, density_ratio = density_ratio_pred, distance_func = distance_func)
+
+quanti_error_pred
+quanti_error_test
+```
+
