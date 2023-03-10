@@ -1,5 +1,6 @@
 The git repository (available at https://github.com/charliesire/quantization_Campbell2D.git) provides the codes and data to reproduce all the experiments related to the Campbell2D function that are described in the article. 
 More precisely : 
+ - FunQuant-0.1.3 is the version 0.1.3 of the package FunQuant, that contains the functions to perform the Prototype Maps Algorithm, to tune the metamodel and compute the performance metrics.
  - GpOutput2D-main contains the code from Elodie Perrin to perform FPCA combined with Gaussian Processes. 
  - Campbell2D.R is the Campbell2D function generating the Campbell maps.
  - NewFitting_Charlie_v090821.RData are historical data related to the offshore conditions, providing the probabilistic distributions.
