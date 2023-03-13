@@ -19,7 +19,7 @@ With the notebooks PMalgo_true.Rmd and PMalgo_pred.Rmd, we obtained two differen
 
 Therefore, to evaluate the quality of the representive maps obtained in the predicted case, we compute the excess in quantization error due to the metamodel,
     $$\epsilon_\Gamma^{MM} = \frac{\hat{e}(\Gammapred)-\hat{e}(\Gammaref)}{\hat{e}(\Gammaref)}~,
-$$ where $\hat{e}(\Gamm) = \left(\frac{1}{\nerr} \sum_{k = 1}^{\nerr} \norm{\Ytrue(\tilde{X}^{(k)}) - \rep(\Ytrue(\tilde{X}^{(k)}))}^2\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}\right)^{\frac{1}{2}}$ is an empirical quantization error, with $\nerr = 10^6$ here.
+$$ where $\hat{e}(\Gamm) = \left(\frac{1}{\nerr} \sum_{k = 1}^{\nerr} \norm{\Ytrue(\tilde{x}^k) - \rep(\Ytrue(\tilde{x}^k))}^2\frac{f_{X}(\tilde{x}^k)}{\biais(\tilde{x}^k)}\right)^{\frac{1}{2}}$ is an empirical quantization error, with $\nerr = 10^6$ here.
     
 
 ```{r}

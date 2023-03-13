@@ -9,7 +9,7 @@ output: html_notebook
 \newcommand{\Ytrue}{{Y}}
 \newcommand{\clust}[2]{C^{#1}_{#2}}
 
-The idea here is to compute the probabilities associated to the optimal quantization $\Gamm^{\star}$ obtained in the notebook PMalgo_true.Rmd, with a very large sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$.
+The idea here is to compute the probabilities associated to the optimal quantization $\Gamm^{\star}$ obtained in the notebook PMalgo_true.Rmd, with a very large sample $(\tilde{x}^k)_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$.
 
 
 ```{r}
@@ -34,7 +34,7 @@ z2 = seq(-90,90,l=dim_map[2])
 
 ```
 
-We sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$
+We sample $(\tilde{x}^k)_{k \in \{1,\dots,10^7\}}$ i.i.d of density function $\biais$
 
 ```{r}
 set.seed(1234)
@@ -52,7 +52,7 @@ Xtilde = transform_X(Xtilde)
 
 ```
 
-We compute the weights $\left(\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)})}\right){_{k \in \{1,\dots,10^7\}}}$, stored in the vector densite_vec
+We compute the weights $\left(\frac{f_{X}(\tilde{x}^k)}{\biais(\tilde{x}^k)}\right){_{k \in \{1,\dots,10^7\}}}$, stored in the vector densite_vec
 
 ```{r}
 Xtilde_phy = ((Xtilde + 1)/6)[,1:7]
@@ -79,7 +79,7 @@ for(batch in 1:100){
 ```
 ## With the true maps
 
-We compute the Voronoi cell associated to every $Y(\tilde{X}^{k})$
+We compute the Voronoi cell associated to every $Y(\tilde{x}^{k})$
 
 ```{r, results='hide'}
 cell_numbers = c()
@@ -94,7 +94,7 @@ rm(maps_true)
 
 ```
 
-And for each voronoi cell, we compute $\hat{P}_{\tilde{n}}(\Gamm^{\star},j, \Ytrue) = \frac{1}{\tilde{n}} \sum^{\tilde{n}}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm^{\star}}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}_{k})}$ with $\tilde{n} = 10^7$
+And for each voronoi cell, we compute a realization of $\hat{P}_{\tilde{n}}(\Gamm^{\star},j, \Ytrue) = \frac{1}{\tilde{n}} \sum^{\tilde{n}}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^k)}{\Gamm^{\star}}{j} }\frac{f_{X}(\tilde{X}^k)}{\biais(\tilde{X}^{k})}$ with $\tilde{n} = 10^7$
 
 Here are the probabilities obtained with the true maps
 

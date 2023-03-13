@@ -27,11 +27,11 @@ Finally, the $90\%$-quantile of these $64^2$ variances is computed, and its squa
 
 # IS coefficient of variation of the membership probability
 
-Considering a large sample $(\tilde{X}^{(k)})_{k=1}^{\nvar}$ of $\tilde{X}$, an empirical estimator of $\var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$ is,
-$$\frac{1}{\nvar -1}\sum_{k=1}^{\nvar}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{\nvar}(\Gamm,j,\Ytrue)\right]^2~.$$
+Considering $(\tilde{X}^{k})_{k=1}^{\nvar}$ a large number of i.i.d random variable of density $\nu$, an empirical estimator of $\var\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X})}{\Gamm}{j}}\frac{f_{X}(\tilde{X})}{\biais(\tilde{X})}\right)$ is,
+$$\frac{1}{\nvar -1}\sum_{k=1}^{\nvar}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j}}\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})} - \hat{P}_{\nvar}(\Gamm,j,\Ytrue)\right]^2~.$$
 
 Then an estimator of $\frac{\sqrt{\var\left(\hat{P}_{\tilde{n}}(\Gamm,j, \Ytrue)\right)}}{\hat{P}_{\tilde{n}}(\Gamm,j, \Ytrue)}$ is the IS relative standard deviation
-$$\epsilon_P^{IS}(\tilde{n},\Gamm^{r},j) = \frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{\nvar -1}\sum_{k=1}^{\nvar}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X^{(k)}})}{\Gamm}{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\biais(\tilde{X^{(k)}})} - \hat{P}_{\nvar}(\Gamm,j,\Ytrue)\right]^2}}{\hat{P}_{\nvar}(\Gamm,j,\Ytrue)}~.$$ 
+$$\epsilon_P^{IS}(\tilde{n},\Gamm^{r},j) = \frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{\nvar -1}\sum_{k=1}^{\nvar}\left[\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j}}\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})} - \hat{P}_{\nvar}(\Gamm,j,\Ytrue)\right]^2}}{\hat{P}_{\nvar}(\Gamm,j,\Ytrue)}~.$$ 
 We work here with $\nvar = 10^5$ and $\tilde{n} = 10^7$.
 
 
@@ -49,7 +49,7 @@ z1 = seq(-90,90,l=dim_map[1])
 z2 = seq(-90,90,l=dim_map[2])
 ```
 
-We sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
+We sample $(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
 
 ```{r}
 set.seed(1234)
@@ -66,7 +66,7 @@ Xtilde = transform_X(Xtilde)
 ```
 
 
-We compute $\left(\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)})}\right){_{k \in \{1,\dots,10^5\}}}$ 
+We compute $\left(\frac{f_{X}(\tilde{x}^k)}{\biais(\tilde{x}^k)}\right){_{k \in \{1,\dots,10^5\}}}$ 
 
 ```{r}
 Xtilde_phy = ((Xtilde + 1)/6)[,1:7]
@@ -94,7 +94,7 @@ for(it in 1:100){
 ```
 
 
-Compute $Y(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of real maps
+Compute $Y(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ the sample of real maps
 
 ```{r}
 maps_true = Campbell2D(Xtilde,z1,z2)
@@ -131,23 +131,23 @@ boxplot(relative_std, col = "darkolivegreen2", ylab = "Proba. relative standard 
 
 
 We have 
-$(\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i} = \frac{\frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}}{\hat{P}_{\ntrue}(\Gamm,j,\Ytrue)}$ 
-with $\Ytrue_{,i}(\tilde{X}^{(k)})$ the $i$th pixel of the map $\Ytrue(\tilde{X}^{(k)})$.
+$(\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i} = \frac{\frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{k})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})}}{\hat{P}_{\ntrue}(\Gamm,j,\Ytrue)}$ 
+with $\Ytrue_{,i}(\tilde{X}^{k})$ the $i$th pixel of the map $\Ytrue(\tilde{X}^{k})$.
 
 As detailed in \cite{Kempen}, the variance of the ratio of two random variables $A$ and $B$ can be approximated by the following expression:
 $$\var\left(\frac{A}{B}\right) \approx \frac{\mu_{A}^{2}}{\mu_{B}^2}\left[\frac{\var(A)}{\mu_{A}^2}-2\frac{cov(A,B)}{\mu_A\mu_{B}} + \frac{\var(B)}{\mu_B^2}\right]~.$$ with $\mu_A,\mu_{B}$ the mean of $A$ and $B$.
 
-In our case,  we denote $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
+In our case,  we denote $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{k})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
 and $B = \hat{P}_{\ntrue}(\Gamm,j,\Ytrue)$
 
 
-Then, with a large sample $(\tilde{X}^{(k)})_{k=1}^{\nvar}$ of $\tilde{X}$, we can compute the empirical estimation of the needed quantities:
+Then, with a large sample $(\tilde{X}^{k})_{k=1}^{\nvar}$ of $\tilde{X}$, we can compute the empirical estimation of the needed quantities:
 
-- $\hat\mu_{A_{i}} = \frac{1}{\nvar} \sum^{\nvar}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$
-- $\hat{\var}(A_{i}) = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)^2$
-- $\hat\mu_{B} = \hat{P}_{\nvar}(\Gamm,j,\Ytrue) =  \frac{1}{\nvar} \sum^{\nvar}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ 
-- $\hat{\var}(B) = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)^2$
-- $\hat{cov}(A_{i},B) = \frac{1}{\ntrue} \frac{1}{\nvar-1}\sum^{\nvar}_{k=1}\left(\Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)$
+- $\hat\mu_{A_{i}} = \frac{1}{\nvar} \sum^{\nvar}_{k=1} \Ytrue_{,i}(\tilde{X}^{k})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})}$
+- $\hat{\var}(A_{i}) = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\Ytrue_{,i}(\tilde{X}^{k})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)^2$
+- $\hat\mu_{B} = \hat{P}_{\nvar}(\Gamm,j,\Ytrue) =  \frac{1}{\nvar} \sum^{\nvar}_{k=1} \mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})}$ 
+- $\hat{\var}(B) = \frac{1}{\ntrue} \frac{1}{\nvar-1} \sum^{\nvar}_{k=1} \left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)^2$
+- $\hat{cov}(A_{i},B) = \frac{1}{\ntrue} \frac{1}{\nvar-1}\sum^{\nvar}_{k=1}\left(\Ytrue_{,i}(\tilde{X}^{k})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})} - \hat\mu_{A_{i}}\right)\left(\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})} - \hat\mu_{B}\right)$
 
 Then,  $\forall i \in \{1\dots64^2\}$, i.e. for each pixel, the standard deviation can be computed : 
 $$\hat{e}((\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i}) = \sqrt{\hat{\var}\left((\estim_{\ntrue}(\Gamm,j,\Ytrue))_{i}\right)}.$$
@@ -160,7 +160,7 @@ Finally, the $90\%$-quantile over $i$ is computed for a given Voronoi cell $\clu
 
 First, computation of $\var\left(\frac{A_{i}}{B}\right) \approx \frac{\mu_{A_{i}}^{2}}{\mu_{B}^2}\left[\frac{\var(A_{i})}{\mu_{A_{i}}}-2\frac{cov(A_{i},B)}{\mu_{A_{i}}\mu_{B}} + \frac{\var(B)^2}{\mu_B^2}\right]$ with $\mu_A,\mu_{B}$ $\forall i \in \{1,\dots,64^2\}$ and $\forall j \in \{1,\dots,5\}, \forall \Gamm \in (\Gamm^{r})$
 
-with $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{(k)})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{(k)})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
+with $A_{i} = \frac{1}{\ntrue} \sum^{\ntrue}_{k=1} \Ytrue_{,i}(\tilde{X}^{k})\mathbb{1}_{\yinclust{\Ytrue(\tilde{X}^{k})}{\Gamm}{j} }\frac{f_{X}(\tilde{X}^{k})}{\biais(\tilde{X}^{k})}$ for $i \in \{1,\dots,64^2\}$,
 and $B = \hat{P}_{\ntrue}(\Gamm,j,\Ytrue)$
 
 ```{r}

@@ -1775,20 +1775,20 @@ square root gives the metric <span class="math inline">\(\epsilon_{\Gamma}^{IS}(
 </ul>
 <div id="is-coefficient-of-variation-of-the-membership-probability" class="section level1">
 <h1>IS coefficient of variation of the membership probability</h1>
-<p>Considering a large sample <span class="math inline">\((\tilde{X}^{(k)})_{k=1}^{n_{v}}\)</span> of <span class="math inline">\(\tilde{X}\)</span>, an empirical estimator of
+<p>Considering <span class="math inline">\((\tilde{X}^{k})_{k=1}^{n_{v}}\)</span> a large number of i.i.d random variable of density <span class="math inline">\(\nu\)</span>, an empirical estimator of
 <span class="math inline">\(\mathbb{V}\left(\mathbb{1}_{{Y}(\tilde{X})
 \in
 C^{\Gamma}_{j}}\frac{f_{X}(\tilde{X})}{\nu(\tilde{X})}\right)\)</span>
-is, <span class="math display">\[\frac{1}{n_{v}-1}\sum_{k=1}^{n_{v}}\left[\mathbb{1}_{{Y}(\tilde{X^{(k)}})
+is, <span class="math display">\[\frac{1}{n_{v}-1}\sum_{k=1}^{n_{v}}\left[\mathbb{1}_{{Y}(\tilde{X}^{k})
 \in
-C^{\Gamma}_{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\nu(\tilde{X^{(k)}})}
+C^{\Gamma}_{j}}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}
 - \hat{P}_{n_{v}}(\Gamma,j,{Y})\right]^2~.\]</span></p>
 <p>Then an estimator of <span class="math inline">\(\frac{\sqrt{\mathbb{V}\left(\hat{P}_{\tilde{n}}(\Gamma,j,
 {Y})\right)}}{\hat{P}_{\tilde{n}}(\Gamma,j, {Y})}\)</span> is the IS
 relative standard deviation <span class="math display">\[\epsilon_P^{IS}(\tilde{n},\Gamma^{r},j) =
-\frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{n_{v}-1}\sum_{k=1}^{n_{v}}\left[\mathbb{1}_{{Y}(\tilde{X^{(k)}})
+\frac{1}{\sqrt{\tilde{n}}}\frac{\sqrt{\frac{1}{n_{v}-1}\sum_{k=1}^{n_{v}}\left[\mathbb{1}_{{Y}(\tilde{X}^{k})
 \in
-C^{\Gamma}_{j}}\frac{f_{X^{(k)}}(\tilde{X^{(k)}})}{\nu(\tilde{X^{(k)}})}
+C^{\Gamma}_{j}}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}
 -
 \hat{P}_{n_{v}}(\Gamma,j,{Y})\right]^2}}{\hat{P}_{n_{v}}(\Gamma,j,{Y})}~.\]</span>
 We work here with <span class="math inline">\(n_{v}= 10^5\)</span> and
@@ -1860,7 +1860,7 @@ z2 = seq(-90,90,l=dim_map[2])</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>We sample <span class="math inline">\((\tilde{X}^{(k)})_{k \in
+<p>We sample <span class="math inline">\((\tilde{x}^{k})_{k \in
 \{1,\dots,10^5\}}\)</span> i.i.d of density function <span class="math inline">\(\nu\)</span></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
@@ -1879,7 +1879,7 @@ Xtilde = transform_X(Xtilde)
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>We compute <span class="math inline">\(\left(\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{(k)})}\right){_{k
+<p>We compute <span class="math inline">\(\left(\frac{f_{X}(\tilde{x}^{k})}{\nu(\tilde{x}^{k})}\right){_{k
 \in \{1,\dots,10^5\}}}\)</span></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
@@ -1912,7 +1912,7 @@ for(it in 1:100){
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>Compute <span class="math inline">\(Y(\tilde{X}^{(k)})_{k \in
+<p>Compute <span class="math inline">\(Y(\tilde{x}^{k})_{k \in
 \{1,\dots,10^5\}}\)</span> the sample of real maps</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
@@ -1958,11 +1958,11 @@ relative_std = unlist(std_list)
 <h2>IS centroid standard deviation</h2>
 <p>We have <span class="math inline">\((\hat{E}_{n_{\mathrm{maps}}}(\Gamma,j,{Y}))_{i} =
 \frac{\frac{1}{n_{\mathrm{maps}}} \sum^{n_{\mathrm{maps}}}_{k=1}
-{Y}_{,i}(\tilde{X}^{(k)})\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in
+{Y}_{,i}(\tilde{X}^{k})\mathbb{1}_{{Y}(\tilde{X}^{k}) \in
 C^{\Gamma}_{j}
-}\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})}}{\hat{P}_{n_{\mathrm{maps}}}(\Gamma,j,{Y})}\)</span>
-with <span class="math inline">\({Y}_{,i}(\tilde{X}^{(k)})\)</span> the
-<span class="math inline">\(i\)</span>th pixel of the map <span class="math inline">\({Y}(\tilde{X}^{(k)})\)</span>.</p>
+}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}}{\hat{P}_{n_{\mathrm{maps}}}(\Gamma,j,{Y})}\)</span>
+with <span class="math inline">\({Y}_{,i}(\tilde{X}^{k})\)</span> the
+<span class="math inline">\(i\)</span>th pixel of the map <span class="math inline">\({Y}(\tilde{X}^{k})\)</span>.</p>
 <p>As detailed in , the variance of the ratio of two random variables
 <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> can be approximated by the following
 expression: <span class="math display">\[\mathbb{V}\left(\frac{A}{B}\right) \approx
@@ -1970,38 +1970,38 @@ expression: <span class="math display">\[\mathbb{V}\left(\frac{A}{B}\right) \app
 + \frac{\mathbb{V}(B)}{\mu_B^2}\right]~.\]</span> with <span class="math inline">\(\mu_A,\mu_{B}\)</span> the mean of <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>.</p>
 <p>In our case, we denote <span class="math inline">\(A_{i} =
 \frac{1}{n_{\mathrm{maps}}} \sum^{n_{\mathrm{maps}}}_{k=1}
-{Y}_{,i}(\tilde{X}^{(k)})\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in
+{Y}_{,i}(\tilde{X}^{k})\mathbb{1}_{{Y}(\tilde{X}^{k}) \in
 C^{\Gamma}_{j}
-}\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})}\)</span> for <span class="math inline">\(i \in \{1,\dots,64^2\}\)</span>, and <span class="math inline">\(B =
+}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}\)</span> for <span class="math inline">\(i \in \{1,\dots,64^2\}\)</span>, and <span class="math inline">\(B =
 \hat{P}_{n_{\mathrm{maps}}}(\Gamma,j,{Y})\)</span></p>
-<p>Then, with a large sample <span class="math inline">\((\tilde{X}^{(k)})_{k=1}^{n_{v}}\)</span> of <span class="math inline">\(\tilde{X}\)</span>, we can compute the empirical
+<p>Then, with a large sample <span class="math inline">\((\tilde{X}^{k})_{k=1}^{n_{v}}\)</span> of <span class="math inline">\(\tilde{X}\)</span>, we can compute the empirical
 estimation of the needed quantities:</p>
 <ul>
 <li><span class="math inline">\(\hat\mu_{A_{i}} = \frac{1}{n_{v}}
 \sum^{n_{v}}_{k=1}
-{Y}_{,i}(\tilde{X}^{(k)})\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in
+{Y}_{,i}(\tilde{X}^{k})\mathbb{1}_{{Y}(\tilde{X}^{k}) \in
 C^{\Gamma}_{j}
-}\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})}\)</span></li>
+}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}\)</span></li>
 <li><span class="math inline">\(\hat{\mathbb{V}}(A_{i}) =
 \frac{1}{n_{\mathrm{maps}}} \frac{1}{n_{v}-1} \sum^{n_{v}}_{k=1}
-\left({Y}_{,i}(\tilde{X}^{(k)})\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in
-C^{\Gamma}_{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})} -
+\left({Y}_{,i}(\tilde{X}^{k})\mathbb{1}_{{Y}(\tilde{X}^{k}) \in
+C^{\Gamma}_{j} }\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})} -
 \hat\mu_{A_{i}}\right)^2\)</span></li>
 <li><span class="math inline">\(\hat\mu_{B} =
 \hat{P}_{n_{v}}(\Gamma,j,{Y}) = \frac{1}{n_{v}} \sum^{n_{v}}_{k=1}
-\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in C^{\Gamma}_{j}
-}\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})}\)</span></li>
+\mathbb{1}_{{Y}(\tilde{X}^{k}) \in C^{\Gamma}_{j}
+}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}\)</span></li>
 <li><span class="math inline">\(\hat{\mathbb{V}}(B) =
 \frac{1}{n_{\mathrm{maps}}} \frac{1}{n_{v}-1} \sum^{n_{v}}_{k=1}
-\left(\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in C^{\Gamma}_{j}
-}\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})} -
+\left(\mathbb{1}_{{Y}(\tilde{X}^{k}) \in C^{\Gamma}_{j}
+}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})} -
 \hat\mu_{B}\right)^2\)</span></li>
 <li><span class="math inline">\(\hat{cov}(A_{i},B) =
 \frac{1}{n_{\mathrm{maps}}}
-\frac{1}{n_{v}-1}\sum^{n_{v}}_{k=1}\left({Y}_{,i}(\tilde{X}^{(k)})\mathbb{1}_{{Y}(\tilde{X}^{(k)})
-\in C^{\Gamma}_{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})} -
-\hat\mu_{A_{i}}\right)\left(\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in
-C^{\Gamma}_{j} }\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})} -
+\frac{1}{n_{v}-1}\sum^{n_{v}}_{k=1}\left({Y}_{,i}(\tilde{X}^{k})\mathbb{1}_{{Y}(\tilde{X}^{k})
+\in C^{\Gamma}_{j} }\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})} -
+\hat\mu_{A_{i}}\right)\left(\mathbb{1}_{{Y}(\tilde{X}^{k}) \in
+C^{\Gamma}_{j} }\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})} -
 \hat\mu_{B}\right)\)</span></li>
 </ul>
 <p>Then, <span class="math inline">\(\forall i \in
@@ -2021,9 +2021,9 @@ with <span class="math inline">\(n_{\mathrm{maps}}= 10^6\)</span> and
 (\Gamma^{r})\)</span></p>
 <p>with <span class="math inline">\(A_{i} = \frac{1}{n_{\mathrm{maps}}}
 \sum^{n_{\mathrm{maps}}}_{k=1}
-{Y}_{,i}(\tilde{X}^{(k)})\mathbb{1}_{{Y}(\tilde{X}^{(k)}) \in
+{Y}_{,i}(\tilde{X}^{k})\mathbb{1}_{{Y}(\tilde{X}^{k}) \in
 C^{\Gamma}_{j}
-}\frac{f_{X}(\tilde{X}^{(k)})}{\nu(\tilde{X}^{k})}\)</span> for <span class="math inline">\(i \in \{1,\dots,64^2\}\)</span>, and <span class="math inline">\(B =
+}\frac{f_{X}(\tilde{X}^{k})}{\nu(\tilde{X}^{k})}\)</span> for <span class="math inline">\(i \in \{1,\dots,64^2\}\)</span>, and <span class="math inline">\(B =
 \hat{P}_{n_{\mathrm{maps}}}(\Gamma,j,{Y})\)</span></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->

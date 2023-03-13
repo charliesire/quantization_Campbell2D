@@ -16,9 +16,9 @@ This notebook evaluates the precision of the metamodel on the evaluation of the 
 
 The method is to : 
  
-  - Sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
-  - Compute $Y(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of real maps
-  - Compute $\hat{Y}(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of predicted maps from 1300 training maps
+  - Sample $(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
+  - Compute $Y(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ the sample of real maps
+  - Compute $\hat{Y}(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ the sample of predicted maps from 1300 training maps
   - Compute $(\Gamm^r)_{r \in \{1,\dots,100\}}$ from the $\Gamm^{\star}$ obtained by applying the Prototype Maps Algorithm with 10^6 maps (notebook lloyd_true.Rmd). A random change between 0 and $20\%$ is apply to $\Gamm^{\star}$
   - Compute $\forall r \in \{1,\dots,100\}, \erreurprobarelative(n,\Gamm^{r},j) = \frac{\mid  \hat{P}_{n}(\Gamm^{r},j,\Ytrue) - \hat{P}_{n}(\Gamm^{r},j,\Ypred) \mid}{\hat{P}_{n}(\Gamm^{r},j,\Ytrue)}$ with $n= 10^5$
   
@@ -44,7 +44,7 @@ z2 = seq(-90,90,l=dim_map[2])
 
 ## Get biased sample 
 
-We sample $(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
+We sample $(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ i.i.d of density function $\biais$
 
 ```{r}
 set.seed(1234)
@@ -63,7 +63,7 @@ Y_training = Campbell2D(X_training,z1,z2)
 
 ## Compute the weights 
 
-We compute $\left(\frac{f_{X}(\tilde{X}^{(k)})}{\biais(\tilde{X}^{(k)})}\right){_{k \in \{1,\dots,10^5\}}}$
+We compute $\left(\frac{f_{X}(\tilde{x}^k)}{\biais(\tilde{x}^k)}\right){_{k \in \{1,\dots,10^5\}}}$
 
 ```{r}
 Xtilde_phy = ((Xtilde + 1)/6)[,1:7]
@@ -129,7 +129,7 @@ for(it in 1:100){
 
 ## True maps
 
-Compute $Y(\tilde{X}^{(k)})_{k \in \{1,\dots,10^5\}}$ the sample of real maps
+Compute $Y(\tilde{x}^k)_{k \in \{1,\dots,10^5\}}$ the sample of real maps
 
 ```{r}
 maps_true = Campbell2D(Xtilde,z1,z2)
